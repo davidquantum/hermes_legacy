@@ -49,7 +49,7 @@ using namespace RefinementSelectors;
  */
 
 // Parameters to tweak the amount of output to the console.
-#define NOSCREENSHOT
+#define SCREENSHOT
 
 #define TWO_BASE_MESH
 
@@ -88,7 +88,7 @@ const int NEWTON_MAX_ITER = 100;                  // Maximum allowed number of N
 const int UNREF_FREQ = 1;                         // every UNREF_FREQth time step the mesh is unrefined.
 const double THRESHOLD = 0.3;                     // This is a quantitative parameter of the adapt(...) function and
                                                   // it has different meanings for various adaptive strategies (see below).
-const int STRATEGY = 0;                           // Adaptive strategy:
+const int STRATEGY = 1;                           // Adaptive strategy:
                                                   // STRATEGY = 0 ... refine elements until sqrt(THRESHOLD) times total
                                                   //   error is processed. If more elements have similar errors, refine
                                                   //   all to keep the mesh symmetric.
@@ -297,12 +297,12 @@ int main (int argc, char* argv[]) {
 
   // Visualization windows.
   char title[1000];
-  ScalarView Cview("Concentration [mol/m3]", new WinGeom(0, 0, 400, 300));
-  ScalarView phiview("Voltage [V]", new WinGeom(10, 0, 400, 300));
+  ScalarView Cview("Concentration [mol/m3]", new WinGeom(0, 0, 600, 400));
+  ScalarView phiview("Voltage [V]", new WinGeom(10, 0, 600, 400));
   ScalarView u1view("X displacement [m]", new WinGeom(320, 0, 600, 400));
   ScalarView u2view("Y displacement [m]", new WinGeom(830, 0, 600, 400));
-  OrderView Cordview("C order", new WinGeom(0, 470, 400, 300));
-  OrderView phiordview("Phi order", new WinGeom(10, 470, 400, 300));
+  OrderView Cordview("C order", new WinGeom(0, 470, 600, 400));
+  OrderView phiordview("Phi order", new WinGeom(10, 470, 600, 400));
   OrderView u1ordview("u1 order", new WinGeom(320, 470, 600, 400));
   OrderView u2ordview("u2 order", new WinGeom(830, 470, 600, 400));
 
@@ -449,7 +449,7 @@ int main (int argc, char* argv[]) {
       Hermes::vector<double> err_est_rel;
       double err_est_rel_total = adaptivity->calc_err_est(Hermes::vector<Solution *>(&C_sln, &phi_sln, &u1_sln, &u2_sln),
                                  Hermes::vector<Solution *>(&C_ref_sln, &phi_ref_sln, &u1_ref_sln, &u2_ref_sln),
-                                 &err_est_rel) * 100;
+                                 &err_est_rel/*, HERMES_TOTAL_ERROR_REL | HERMES_ELEMENT_ERROR_REL*/) * 100;
 
       // Report results.
       info("ndof_coarse[0]: %d, ndof_fine[0]: %d",
@@ -482,9 +482,7 @@ int main (int argc, char* argv[]) {
 
         if (Space::get_num_dofs(Hermes::vector<Space *>(&C_space, &phi_space, &u1_space, &u2_space)) >= NDOF_STOP)
           done = true;
-        else
-          // Increase the counter of performed adaptivity steps.
-          as++;
+
       }
 
       // Visualize the solution and mesh.
@@ -530,6 +528,24 @@ int main (int argc, char* argv[]) {
        u2ordview.show(&u2_space);
 
 
+       #ifdef SCREENSHOT
+       if (pid.get_timestep_number() == 1) {
+    	   if (as == 1) {
+        	   info("Starting to save screenshots. Please adjust the views as desired!");
+    		   View::wait(HERMES_WAIT_KEYPRESS);
+    	   }
+    	   Cview.save_numbered_screenshot("/home/david/tmp/ipmc/C%03d.bmp", as, true);
+    	   phiview.save_numbered_screenshot("/home/david/tmp/ipmc/phi%03d.bmp", as, true);
+    	   u1view.save_numbered_screenshot("/home/david/tmp/ipmc/u1%03d.bmp", as, true);
+    	   u2view.save_numbered_screenshot("/home/david/tmp/ipmc/u2%03d.bmp", as, true);
+    	   Cordview.save_numbered_screenshot("/home/david/tmp/ipmc/Cord%03d.bmp", as, true);
+    	   phiordview.save_numbered_screenshot("/home/david/tmp/ipmc/phiord%03d.bmp", as, true);
+    	   u1ordview.save_numbered_screenshot("/home/david/tmp/ipmc/u1ord%03d.bmp", as, true);
+    	   u2ordview.save_numbered_screenshot("/home/david/tmp/ipmc/u2ord%03d.bmp", as, true);
+
+       }
+       #endif
+
 
       //View::wait(HERMES_WAIT_KEYPRESS);
 
@@ -548,6 +564,7 @@ int main (int argc, char* argv[]) {
       delete dp;
       info("delete[] coeff_vec");
       delete[] coeff_vec;
+      as++;
     }
     while (done == false);
 
