@@ -49,7 +49,7 @@ using namespace RefinementSelectors;
  */
 
 // Parameters to tweak the amount of output to the console.
-#define SCREENSHOT
+#define SCREENSHOT_NO
 
 #define TWO_BASE_MESH
 
@@ -69,7 +69,7 @@ const double mech_E = 0.5e9;              //[Pa]
 const double mech_nu = 0.487;              // Poisson ratio
 const double mech_mu = mech_E / (2 * (1 + mech_nu));
 const double mech_lambda = mech_E * mech_nu / ((1 + mech_nu) * (1 - 2 * mech_nu));
-const double lin_force_coup = 1e5;
+const double lin_force_coup = 1e8;
 
 
 /* Simulation parameters */
@@ -449,7 +449,7 @@ int main (int argc, char* argv[]) {
       Hermes::vector<double> err_est_rel;
       double err_est_rel_total = adaptivity->calc_err_est(Hermes::vector<Solution *>(&C_sln, &phi_sln, &u1_sln, &u2_sln),
                                  Hermes::vector<Solution *>(&C_ref_sln, &phi_ref_sln, &u1_ref_sln, &u2_ref_sln),
-                                 &err_est_rel/*, HERMES_TOTAL_ERROR_REL | HERMES_ELEMENT_ERROR_REL*/) * 100;
+                                 &err_est_rel, HERMES_TOTAL_ERROR_REL | HERMES_ELEMENT_ERROR_ABS) * 100;
 
       // Report results.
       info("ndof_coarse[0]: %d, ndof_fine[0]: %d",
@@ -495,6 +495,7 @@ int main (int argc, char* argv[]) {
       sprintf(title, "Mesh[C], time step# %d, step size %g, time %g",
           pid.get_timestep_number(), *TAU, pid.get_time());
       Cordview.set_title(title);
+      Cordview.set_palette(H2DV_PT_HUESCALE);
       Cordview.show(&C_space);
       
       info("Visualization procedures: phi");
@@ -505,6 +506,7 @@ int main (int argc, char* argv[]) {
       sprintf(title, "Mesh[phi], time step# %d, step size %g, time %g",
           pid.get_timestep_number(), *TAU, pid.get_time());
       phiordview.set_title(title);
+      phiordview.set_palette(H2DV_PT_HUESCALE);
       phiordview.show(&phi_space);
 
       info("Visualization procedures: u1");
@@ -515,6 +517,8 @@ int main (int argc, char* argv[]) {
       sprintf(title, "Mesh[u1], time step# %d, step size %g, time %g",
           pid.get_timestep_number(), *TAU, pid.get_time());
       u1ordview.set_title(title);
+      u1ordview.set_palette(H2DV_PT_HUESCALE);
+
       u1ordview.show(&u1_space);
 
        info("Visualization procedures: u2");
@@ -525,6 +529,7 @@ int main (int argc, char* argv[]) {
        sprintf(title, "Mesh[u2], time step# %d, step size %g, time %g",
            pid.get_timestep_number(), *TAU, pid.get_time());
        u2ordview.set_title(title);
+       u2ordview.set_palette(H2DV_PT_HUESCALE);
        u2ordview.show(&u2_space);
 
 
@@ -532,17 +537,31 @@ int main (int argc, char* argv[]) {
        if (pid.get_timestep_number() == 1) {
     	   if (as == 1) {
         	   info("Starting to save screenshots. Please adjust the views as desired!");
-    		   View::wait(HERMES_WAIT_KEYPRESS);
+    		     View::wait(HERMES_WAIT_KEYPRESS);
     	   }
-    	   Cview.save_numbered_screenshot("/home/david/tmp/ipmc/C%03d.bmp", as, true);
-    	   phiview.save_numbered_screenshot("/home/david/tmp/ipmc/phi%03d.bmp", as, true);
-    	   u1view.save_numbered_screenshot("/home/david/tmp/ipmc/u1%03d.bmp", as, true);
-    	   u2view.save_numbered_screenshot("/home/david/tmp/ipmc/u2%03d.bmp", as, true);
-    	   Cordview.save_numbered_screenshot("/home/david/tmp/ipmc/Cord%03d.bmp", as, true);
-    	   phiordview.save_numbered_screenshot("/home/david/tmp/ipmc/phiord%03d.bmp", as, true);
-    	   u1ordview.save_numbered_screenshot("/home/david/tmp/ipmc/u1ord%03d.bmp", as, true);
-    	   u2ordview.save_numbered_screenshot("/home/david/tmp/ipmc/u2ord%03d.bmp", as, true);
+    	   Cview.save_numbered_screenshot("C%03d.bmp", as, true);
+    	   phiview.save_numbered_screenshot("phi%03d.bmp", as, true);
+    	   u1view.save_numbered_screenshot("u1%03d.bmp", as, true);
+    	   u2view.save_numbered_screenshot("u2%03d.bmp", as, true);
+    	   Cordview.save_numbered_screenshot("Cord%03d.bmp", as, true);
+    	   phiordview.save_numbered_screenshot("phiord%03d.bmp", as, true);
+    	   u1ordview.save_numbered_screenshot("u1ord%03d.bmp", as, true);
+    	   u2ordview.save_numbered_screenshot("u2ord%03d.bmp", as, true);
 
+       }
+       if (done) {
+         int save_ts = pid.get_timestep_number();
+         //View::wait(HERMES_WAIT_KEYPRESS);
+
+         Cview.save_numbered_screenshot("C%03d.bmp", save_ts, true);
+         phiview.save_numbered_screenshot("phi%03d.bmp", save_ts, true);
+         u1view.save_numbered_screenshot("u1%03d.bmp", save_ts, true);
+         u2view.save_numbered_screenshot("u2%03d.bmp", save_ts, true);
+         Cordview.save_numbered_screenshot("Cord%03d.bmp", save_ts, true);
+         phiordview.save_numbered_screenshot("phiord%03d.bmp", save_ts, true);
+         u1ordview.save_numbered_screenshot("u1ord%03d.bmp", save_ts, true);
+         u2ordview.save_numbered_screenshot("u2ord%03d.bmp", save_ts, true);
+         //View::wait(HERMES_WAIT_KEYPRESS);
        }
        #endif
 
