@@ -161,6 +161,8 @@ int main (int argc, char* argv[]) {
 
   basemesh_electrochem.refine_towards_boundary(BDY_BOT, REF_INIT - 1);
   basemesh_electrochem.refine_all_elements(1);
+
+
   C_mesh.copy(&basemesh_electrochem);
   phi_mesh.copy(&basemesh_electrochem);
 
@@ -168,6 +170,7 @@ int main (int argc, char* argv[]) {
     basemesh_deformation.refine_all_elements(1); //horizontal
     basemesh_deformation.refine_all_elements(2); //vertical
   }
+
 
   u1_mesh.copy(&basemesh_deformation);
   u2_mesh.copy(&basemesh_deformation);
@@ -305,6 +308,9 @@ int main (int argc, char* argv[]) {
   OrderView phiordview("Phi order", new WinGeom(10, 470, 600, 400));
   OrderView u1ordview("u1 order", new WinGeom(320, 470, 600, 400));
   OrderView u2ordview("u2 order", new WinGeom(830, 470, 600, 400));
+
+  //Graphs
+  SimpleGraph graph_time_dof;
 
   // Visualize the solution.
   ScalarView deformationview("Von Mises stress [Pa]", new WinGeom(1240, 0, 300, 300));
@@ -449,7 +455,7 @@ int main (int argc, char* argv[]) {
       Hermes::vector<double> err_est_rel;
       double err_est_rel_total = adaptivity->calc_err_est(Hermes::vector<Solution *>(&C_sln, &phi_sln, &u1_sln, &u2_sln),
                                  Hermes::vector<Solution *>(&C_ref_sln, &phi_ref_sln, &u1_ref_sln, &u2_ref_sln),
-                                 &err_est_rel, HERMES_TOTAL_ERROR_REL | HERMES_ELEMENT_ERROR_ABS) * 100;
+                                 &err_est_rel, true, HERMES_TOTAL_ERROR_REL | HERMES_ELEMENT_ERROR_ABS) * 100;
 
       // Report results.
       info("ndof_coarse[0]: %d, ndof_fine[0]: %d",
@@ -591,6 +597,12 @@ int main (int argc, char* argv[]) {
     pid.end_step(Hermes::vector<Solution*> (&C_ref_sln, &phi_ref_sln, &u1_ref_sln, &u2_ref_sln),
         Hermes::vector<Solution*> (&C_prev_time, &phi_prev_time, &u1_prev_time, &u2_prev_time));
     // TODO! Time step reduction when necessary.
+
+    graph_time_dof.add_values(((double) pid.get_timestep_number()),
+        ((double) Space::get_num_dofs(Hermes::vector<Space *>(
+        &C_space, &phi_space, &u1_space, &u2_space))));
+
+    graph_time_dof.save("time_dof.dat");
 
     // Copy last reference solution into sln_prev_time.
     C_prev_time.copy(&C_ref_sln);
