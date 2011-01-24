@@ -170,6 +170,8 @@ int main (int argc, char* argv[]) {
     basemesh_deformation.refine_all_elements(1); //horizontal
     basemesh_deformation.refine_all_elements(2); //vertical
   }
+    //extra for high aspect ratio
+    basemesh_deformation.refine_all_elements(2);
 
 
   u1_mesh.copy(&basemesh_deformation);
@@ -455,7 +457,7 @@ int main (int argc, char* argv[]) {
       Hermes::vector<double> err_est_rel;
       double err_est_rel_total = adaptivity->calc_err_est(Hermes::vector<Solution *>(&C_sln, &phi_sln, &u1_sln, &u2_sln),
                                  Hermes::vector<Solution *>(&C_ref_sln, &phi_ref_sln, &u1_ref_sln, &u2_ref_sln),
-                                 &err_est_rel, true, HERMES_TOTAL_ERROR_REL | HERMES_ELEMENT_ERROR_ABS) * 100;
+                                 &err_est_rel, true, HERMES_TOTAL_ERROR_REL | HERMES_ELEMENT_ERROR_REL) * 100;
 
       // Report results.
       info("ndof_coarse[0]: %d, ndof_fine[0]: %d",
