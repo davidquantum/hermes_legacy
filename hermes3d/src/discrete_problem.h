@@ -21,7 +21,7 @@
 #define _DISCRETE_PROBLEM_H_
 
 #include "h3d_common.h"
-#include "weakform.h"
+#include "weakform/weakform.h"
 #include "vector.h"
 #include "matrix.h"
 #include "solver/solver.h"
@@ -43,18 +43,18 @@ public:
 	virtual ~DiscreteProblem();
 	void free();
 
-        // Get pointer to n-th space.
-        Space* get_space(int n) {  return this->spaces[n];  }
+  // Get pointer to n-th space.
+  Space* get_space(int n) {  return this->spaces[n];  }
 
-        // Precalculate matrix sparse structure.
-	void create(SparseMatrix* mat, Vector* rhs = NULL, bool rhsonly = false);
+  // Precalculate matrix sparse structure.
+  void create_sparse_structure(SparseMatrix* mat, Vector* rhs = NULL, bool rhsonly = false);
 
-        // General assembling procedure for nonlinear problems. coeff_vec is the 
-        // previous Newton vector.
+  // General assembling procedure for nonlinear problems. coeff_vec is the 
+  // previous Newton vector.
 	void assemble(SparseMatrix* mat, Vector* rhs = NULL, bool rhsonly = false);
 
-        // Assembling for linear problems. Same as the previous functions, but 
-        // does not need the coeff_vector.
+  // Assembling for linear problems. Same as the previous functions, but 
+  // does not need the coeff_vector.
 	void assemble(scalar* coeff_vec, SparseMatrix* mat, Vector* rhs = NULL,
                       bool rhsonly = false);
   // Get the number of spaces.
@@ -63,12 +63,12 @@ public:
   // Get all spaces as a Hermes::vector.
   Hermes::vector<Space *> get_spaces() {return this->spaces;}
 
-        // Get the number of unknowns.
+  // Get the number of unknowns.
 	int get_num_dofs();
 
 	bool is_matrix_free() { return wf->is_matrix_free(); }
   
-        void invalidate_matrix() { have_matrix = false; }
+  void invalidate_matrix() { have_matrix = false; }
 
 protected:
 	WeakForm* wf;
@@ -156,8 +156,8 @@ protected:
 	                  RefMap *rm, const int np, const QuadPt3D *pt);
 };
 
-HERMES_API Hermes::vector<Space *> * construct_refined_spaces(Hermes::vector<Space *> coarse, int order_increase, int refinement);
-HERMES_API Space* construct_refined_space(Space* coarse, int order_increase, int refinement);
+HERMES_API Hermes::vector<Space *> * construct_refined_spaces(Hermes::vector<Space *> coarse, int order_increase);
+HERMES_API Space* construct_refined_space(Space* coarse, int order_increase);
 
 HERMES_API bool solve_newton(scalar* coeff_vec, DiscreteProblem* dp, Solver* solver, SparseMatrix* matrix,
            Vector* rhs, double NEWTON_TOL, int NEWTON_MAX_ITER, bool verbose = false,

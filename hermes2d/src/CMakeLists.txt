@@ -8,6 +8,7 @@ endif(MSVC)
 # source files for the hermes2d library
 set(SRC
        adapt/adapt.cpp
+       adapt/kelly_type_adapt.cpp
 
        function/solution.cpp 
        function/filter.cpp
@@ -25,12 +26,11 @@ set(SRC
        mesh/hash.cpp 
        mesh/h2d_reader.cpp
        mesh/mesh.cpp 
-       mesh/mesh_parser.cpp 
-       mesh/mesh_lexer.cpp
        mesh/regul.cpp 
        mesh/transform.cpp 
        mesh/traverse.cpp
        mesh/trans.cpp
+       mesh/python_reader.cpp
 
        quadrature/limit_order.cpp
        quadrature/quad_std.cpp
@@ -81,9 +81,9 @@ set(SRC
        h2d_common.cpp  
        discrete_problem.cpp
        runge_kutta.cpp
-
-       ${HERMES_COMMON_DIR}/common.cpp       
-       ${HERMES_COMMON_DIR}/logging.cpp    
+       boundaryconditions/boundaryconditions.cpp
+       
+       ${HERMES_COMMON_DIR}/common.cpp    
        ${HERMES_COMMON_DIR}/hermes_logging.cpp
        ${HERMES_COMMON_DIR}/common_time_period.cpp
        ${HERMES_COMMON_DIR}/callstack.cpp
@@ -91,7 +91,7 @@ set(SRC
        ${HERMES_COMMON_DIR}/utils.cpp
        ${HERMES_COMMON_DIR}/matrix.cpp
        ${HERMES_COMMON_DIR}/tables.cpp
-       ${HERMES_COMMON_DIR}/Teuchos_stacktrace.cpp
+       ${HERMES_COMMON_DIR}/third_party_codes/trilinos-teuchos/Teuchos_stacktrace.cpp
        ${HERMES_COMMON_DIR}/solver/nox.cpp 
        ${HERMES_COMMON_DIR}/solver/epetra.cpp 
        ${HERMES_COMMON_DIR}/solver/aztecoo.cpp 
@@ -103,8 +103,15 @@ set(SRC
        ${HERMES_COMMON_DIR}/solver/umfpack_solver.cpp
        ${HERMES_COMMON_DIR}/solver/precond_ml.cpp 
        ${HERMES_COMMON_DIR}/solver/precond_ifpack.cpp 
+       ${HERMES_COMMON_DIR}/solver/eigensolver.cpp 
+       ${HERMES_COMMON_DIR}/solver/eigen.cpp 
        ${HERMES_COMMON_DIR}/compat/fmemopen.cpp 
        ${HERMES_COMMON_DIR}/compat/c99_functions.cpp
+
+       ${TEUCHOS_SOURCES}
+
+       ${HERMES_COMMON_DIR}/python/python_api.cpp
+       ${HERMES_COMMON_DIR}/python/python_engine.cpp
        )
 
 include(PickRealOrCplxLibs)
@@ -141,44 +148,16 @@ macro(LIBRARY_SETTINGS BIN)
       ${PTHREAD_LIBRARY} ${MPI_LIBRARIES} ${SCALAPACK_LIBRARIES}
 	  ${CLAPACK_LIBRARY} ${BLAS_LIBRARY} ${F2C_LIBRARY}
       ${ADDITIONAL_LIBS}
-      ${PYTHON_LIBRARIES}
+      ${PYTHON_LIBRARY}
       ${EXODUSII_LIBRARY}
   )
 endmacro(LIBRARY_SETTINGS)
 
 macro(BUILD_REPORT_FLAGS FLAGS)
 set(REPORT_FLAGS "")
-if(NOT REPORT_WITH_LOGO)
-	set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_NO_LOGO")
-endif(NOT REPORT_WITH_LOGO)
-if(NOT REPORT_TO_FILE)
-	set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_REPORT_NO_FILE")
-endif(NOT REPORT_TO_FILE)
 if(REPORT_RUNTIME_CONTROL)
 	set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_REPORT_RUNTIME_CONTROL")
 endif(REPORT_RUNTIME_CONTROL)
-if(REPORT_ALL)
-	set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_REPORT_ALL")
-else(REPORT_ALL)
-	if(REPORT_WARNING)
-		set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_REPORT_WARNING")
-	endif(REPORT_WARNING)
-	if(REPORT_INTR_WARNING)
-		set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_REPORT_INTR_WARNING")
-	endif(REPORT_INTR_WARNING)
-	if(REPORT_INFO)
-		set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_REPORT_INFO")
-	endif(REPORT_INFO)
-	if(REPORT_VERBOSE)
-		set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_REPORT_VERBOSE")
-	endif(REPORT_VERBOSE)
-	if(REPORT_TRACE)
-		set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_REPORT_TRACE")
-	endif(REPORT_TRACE)
-	if(REPORT_TIME)
-		set(REPORT_FLAGS "${REPORT_FLAGS} -DHERMES_REPORT_TIME")
-	endif(REPORT_TIME)
-endif(REPORT_ALL)
 set(${FLAGS} "${REPORT_FLAGS}")
 endmacro(BUILD_REPORT_FLAGS)
 
@@ -286,10 +265,10 @@ install(FILES ${INC_COMPAT}    DESTINATION include/hermes_common/compat)
 if(MSVC)
 	set(MSVC_DLL_DEFINES "-DEXPORT_HERMES_DLL")
 	if(H2D_REAL)
-		BUILD_LIB_ALL(${HERMES_REAL_BIN} "${MSVC_DLL_DEFINES} -DH2D_REAL")
+		BUILD_LIB_ALL(${HERMES2D_REAL} "${MSVC_DLL_DEFINES} -DH2D_REAL")
 	endif(H2D_REAL)
 	if(H2D_COMPLEX)
-		BUILD_LIB_ALL(${HERMES_CPLX_BIN} "${MSVC_DLL_DEFINES} -DH2D_COMPLEX")
+		BUILD_LIB_ALL(${HERMES2D_CPLX} "${MSVC_DLL_DEFINES} -DH2D_COMPLEX")
 	endif(H2D_COMPLEX)
 
 else(MSVC)

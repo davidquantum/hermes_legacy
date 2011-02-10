@@ -11,13 +11,14 @@ using namespace RefinementSelectors;
 //  PDE: -Laplace u + V*u = lambda_k u,
 //  where lambda_0, lambda_1, ... are the eigenvalues.
 //
-//  Domain: Square (-pi/2, pi/2)^2.
+//  Domain: Square (-pi/2, pi/2)^2 ... file domain_square.mesh,
+//          L-Shape domain         ... file domain_lshape.mesh.
 //
 //  BC:  Homogeneous Dirichlet.
 //
 //  The following parameters can be changed:
 
-int TARGET_EIGENFUNCTION = 2;                     // Desired eigenfunction: 1 for the first, 2 for the second, etc.
+int TARGET_EIGENFUNCTION = 1;                     // Desired eigenfunction: 1 for the first, 2 for the second, etc.
 
 int ITERATIVE_METHOD = 2;                         // 1 = Newton, 2 = Picard.
 
@@ -34,7 +35,7 @@ const int STRATEGY = 0;                           // Adaptive strategy:
                                                   // STRATEGY = 2 ... refine all elements whose error is larger
                                                   //   than THRESHOLD.
                                                   // More adaptive strategies can be created in adapt_ortho_h1.cpp.
-const CandList CAND_LIST = H2D_HP_ANISO_H;        // Predefined list of element refinement candidates. Possible values are
+const CandList CAND_LIST = H2D_HP_ANISO;          // Predefined list of element refinement candidates. Possible values are
                                                   // H2D_P_ISO, H2D_P_ANISO, H2D_H_ISO, H2D_H_ANISO, H2D_HP_ISO, H2D_HP_ANISO_H
                                                   // H2D_HP_ANISO_P, H2D_HP_ANISO. See User Documentation for details.
 const int MESH_REGULARITY = -1;                   // Maximum allowed level of hanging nodes:
@@ -43,7 +44,7 @@ const int MESH_REGULARITY = -1;                   // Maximum allowed level of ha
                                                   // MESH_REGULARITY = 2 ... at most two-level hanging nodes, etc.
                                                   // Note that regular meshes are not supported, this is due to
                                                   // their notoriously bad performance.
-const double ERR_STOP = 1e-3;                     // Stopping criterion for adaptivity (rel. error tolerance between the
+const double ERR_STOP = 1e-1;                     // Stopping criterion for adaptivity (rel. error tolerance between the
 const double CONV_EXP = 1.0;                      // Default value is 1.0. This parameter influences the selection of
                                                   // cancidates in hp-adaptivity. See get_optimal_refinement() for details.
                                                   // fine mesh and coarse mesh solution in percent).
@@ -87,7 +88,7 @@ int main(int argc, char* argv[])
   // Load the mesh.
   Mesh mesh;
   H2DReader mloader;
-  mloader.load("domain.mesh", &mesh);
+  mloader.load("domain_lshape.mesh", &mesh);
 
   // Perform initial mesh refinements (optional).
   for (int i = 0; i < INIT_REF_NUM; i++) mesh.refine_all_elements();
@@ -114,6 +115,7 @@ int main(int argc, char* argv[])
 
   // Initialize views.
   ScalarView sview("", new WinGeom(0, 0, 440, 350));
+  sview.fix_scale_width(50);
   OrderView oview("", new WinGeom(450, 0, 410, 350));
 
   // DOF convergence graph.
@@ -174,7 +176,7 @@ int main(int argc, char* argv[])
   fclose(file);
 
   // Eigenvalue.
-  double lambda = eigenval[neig-1];
+  double lambda = eigenval[TARGET_EIGENFUNCTION-1];
   info("Eigenvalue on coarse mesh: %g", lambda);
   info("Once more just to check: %g", calc_mass_product((UMFPackMatrix*)matrix_S, coeff_vec, ndof)
       / calc_mass_product((UMFPackMatrix*)matrix_M, coeff_vec, ndof));
@@ -195,7 +197,7 @@ int main(int argc, char* argv[])
   sprintf(title, "Initial mesh");
   oview.set_title(title);
   oview.show(&space);
-  View::wait(HERMES_WAIT_KEYPRESS);
+  //View::wait(HERMES_WAIT_KEYPRESS);
 
   /*** Begin adaptivity ***/
 
@@ -281,9 +283,6 @@ int main(int argc, char* argv[])
       sprintf(title, "Coarse mesh, step %d", as);
       oview.set_title(title);
       oview.show(&space);
-
-      // Wait for keypress.
-      View::wait(HERMES_WAIT_KEYPRESS);
     }
 
     // Calculate element errors and total error estimate.
@@ -316,6 +315,9 @@ int main(int argc, char* argv[])
     delete adaptivity;
     //delete ref_space->get_mesh();
     delete ref_space;
+
+    // Wait for keypress.
+    //View::wait(HERMES_WAIT_KEYPRESS);
   }
   while (done == false);
 

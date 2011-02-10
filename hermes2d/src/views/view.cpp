@@ -548,7 +548,7 @@ void View::wait_for_close()
 
 // These two includes are needed for the wait_for_draw() function below:
 //#include <csignal>
-#include "Teuchos_stacktrace.hpp"
+#include "third_party_codes/trilinos-teuchos/Teuchos_stacktrace.hpp"
 
 void View::wait_for_draw()
 {
@@ -588,17 +588,17 @@ double View::get_tick_count()
 void View::set_title(const char* title)
 {
   bool do_set_title = true;
-  
+
   // Always set the title property.
   this->title = title;
-  
+
   view_sync.enter();
   if (output_id < 0)
     // If the window does not exist, do nothing else and wait until it is created.
     do_set_title = false;
-  
+
   view_sync.leave();
-  
+
   // If the window already exists, show the new title in its header.
   if (do_set_title)
     set_view_title(output_id, title);

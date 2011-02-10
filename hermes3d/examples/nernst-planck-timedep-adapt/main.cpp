@@ -28,12 +28,12 @@ const scalar C0 = 1200;	                          // [mol/m^3] Anion and counter
 /* Simulation parameters */
 const double T_FINAL = 1;
 double INIT_TAU = 0.1;
-double *TAU = &INIT_TAU;                        // Size of the time step
+double *TAU = &INIT_TAU;                          // Size of the time step.
 const int REF_INIT = 3;     	                  // Number of initial refinements.
 
 const int P_INIT_X = 3,
           P_INIT_Y = 3,
-          P_INIT_Z = 3;                         //initial orders
+          P_INIT_Z = 3;                           // Initial orders.
 const bool MULTIMESH = false;	                  // Multimesh?
 const int TIME_DISCR = 1;                         // 1 for implicit Euler, 2 for Crank-Nicolson.
 
@@ -44,9 +44,9 @@ const int NEWTON_MAX_ITER = 100;                  // Maximum allowed number of N
 const int UNREF_FREQ = 1;                         // every UNREF_FREQth time step the mesh is unrefined.
 const double THRESHOLD = 0.3;                     // This is a quantitative parameter of the adapt(...) function and
                                                   // it has different meanings for various adaptive strategies (see below).
-const double ERR_STOP = 5;                      // Stopping criteria
-const int NDOF_STOP = 8000;                   // To prevent adaptivity from going on forever.
-/*const int STRATEGY = 0;                           // Adaptive strategy:
+const double ERR_STOP = 5;                        // Stopping criteria
+const int NDOF_STOP = 8000;                       // To prevent adaptivity from going on forever.
+/*const int STRATEGY = 0;                         // Adaptive strategy:
                                                   // STRATEGY = 0 ... refine elements until sqrt(THRESHOLD) times total
                                                   //   error is processed. If more elements have similar errors, refine
                                                   //   all to keep the mesh symmetric.
@@ -122,8 +122,8 @@ int main (int argc, char* argv[]) {
   // Load the mesh. 
   Mesh basemesh;
   ExodusIIReader mesh_loader;
-  if (!mesh_loader.load("coarse_mesh.e", &basemesh))
-    error("Loading mesh file '%s' failed.\n", "coarse_mesh.e");
+  if (!mesh_loader.load("coarse_mesh_full.e", &basemesh))
+    error("Loading mesh file '%s' failed.\n", "coarse_mesh_full.e");
 
   Mesh C_mesh, phi_mesh;
   C_mesh.copy(basemesh);
@@ -226,8 +226,9 @@ int main (int argc, char* argv[]) {
 
         // Construct globally refined reference mesh
         // and setup reference space.
-        Hermes::vector<Space *>* ref_spaces = construct_refined_spaces(
-            Hermes::vector<Space *>(&C_space, &phi_space), 0, H3D_REFT_HEX_Y);
+        int order_increase = 1;
+        Hermes::vector<Space *>* ref_spaces = construct_refined_spaces(Hermes::vector<Space *>(&C_space, &phi_space), 
+                                                                       order_increase);
         scalar* coeff_vec = new scalar[Space::get_num_dofs(*ref_spaces)];
         DiscreteProblem* dp = new DiscreteProblem(&wf, *ref_spaces, is_linear);
         SparseMatrix* matrix = create_matrix(matrix_solver);

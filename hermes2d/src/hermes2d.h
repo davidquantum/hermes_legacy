@@ -18,6 +18,17 @@
 #ifndef __HERMES_2D_H
 #define __HERMES_2D_H
 
+#include "h2d_common.h"
+
+#include "config.h"
+
+// RCP
+#ifndef WITH_TRILINOS
+#include "../hermes_common/third_party_codes/trilinos-teuchos/Teuchos_RCP.hpp"
+#else
+#include "Teuchos_RCP.hpp"
+#endif
+
 // hermes_common solvers
 #include "../hermes_common/solver/amesos.h"
 #include "../hermes_common/solver/aztecoo.h"
@@ -35,9 +46,14 @@
 #include "../hermes_common/solver/precond_ml.h"
 
 // boundary conditions
+  // this
 #include "../hermes_common/bctypes.h"
+  // is going to be replaced with this
+#include "boundaryconditions/boundaryconditions.h"
 
-#include "h2d_common.h"
+// Eigensolver
+#include "../hermes_common/solver/eigensolver.h"
+
 #include "hermes_logging.h"
 
 #include "range.h"
@@ -98,6 +114,7 @@
 #include "ref_selectors/hcurl_proj_based_selector.h"
 
 #include "adapt/adapt.h"
+#include "adapt/kelly_type_adapt.h"
 #include "neighbor.h"
 #include "ogprojection.h"
 

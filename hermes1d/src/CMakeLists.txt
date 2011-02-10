@@ -12,13 +12,13 @@ set(SRC
     adapt.cpp graph.cpp h1_polys.cpp
     weakform.cpp
   ${HERMES_COMMON_DIR}/common.cpp
-  ${HERMES_COMMON_DIR}/logging.cpp
   ${HERMES_COMMON_DIR}/hermes_logging.cpp
   ${HERMES_COMMON_DIR}/callstack.cpp
   ${HERMES_COMMON_DIR}/error.cpp
   ${HERMES_COMMON_DIR}/utils.cpp
   ${HERMES_COMMON_DIR}/matrix.cpp
-  ${HERMES_COMMON_DIR}/Teuchos_stacktrace.cpp 
+  ${HERMES_COMMON_DIR}/tables.cpp
+  ${HERMES_COMMON_DIR}/third_party_codes/trilinos-teuchos/Teuchos_stacktrace.cpp 
   ${HERMES_COMMON_DIR}/solver/nox.cpp 
   ${HERMES_COMMON_DIR}/solver/epetra.cpp 
   ${HERMES_COMMON_DIR}/solver/aztecoo.cpp 
@@ -69,16 +69,17 @@ macro(LIBRARY_SETTINGS BIN)
       ${PARDISO_LIBRARY}
       ${TRILINOS_LIBRARIES}
       ${PETSC_LIBRARIES}
-      ${MUMPS_LIBRARIES}
+      ${MUMPS_REAL_LIBRARIES}
       ${LAPACK_LIBRARIES}
       ${PTHREAD_LIBRARY} ${MPI_LIBRARIES} ${SCALAPACK_LIBRARIES}
+	  ${CLAPACK_LIBRARY} ${BLAS_LIBRARY} ${F2C_LIBRARY}
       ${ADDITIONAL_LIBS}        
   )
 endmacro(LIBRARY_SETTINGS)
 
 include_directories(${PYTHON_INCLUDE_PATH} ${NUMPY_INCLUDE_PATH})
 
-add_library(${HERMES_BIN} SHARED ${SRC})
+add_library(${HERMES1D} SHARED ${SRC})
 if(DEBUG)
     set_target_properties(hermes1d-debug PROPERTIES COMPILE_FLAGS
         ${CMAKE_CXX_FLAGS_DEBUG})
@@ -87,7 +88,7 @@ if(RELEASE)
     set_target_properties(hermes1d PROPERTIES COMPILE_FLAGS
         ${CMAKE_CXX_FLAGS_RELEASE})
 endif(RELEASE)
-LIBRARY_SETTINGS(${HERMES_BIN})
+LIBRARY_SETTINGS(${HERMES1D})
 
 
 # MSVC (Win) helper macros
@@ -122,9 +123,9 @@ endmacro(BUILD_LIB_ALL)
 
 #install
 if(MSVC)
-	BUILD_LIB_ALL(${HERMES_BIN} "-DH1D_REAL -DEXPORT_HERMES_DLL")
+	BUILD_LIB_ALL(${HERMES1D} "-DH1D_REAL -DEXPORT_HERMES_DLL")
 else(MSVC)
-	install(TARGETS ${HERMES_BIN} RUNTIME DESTINATION bin ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
+	install(TARGETS ${HERMES1D} RUNTIME DESTINATION bin ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
 endif(MSVC)
 
 file(GLOB header_files "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
