@@ -1,0 +1,3 @@
+./nernst-planck-dimensionless
+python plot_graph.py &
+
