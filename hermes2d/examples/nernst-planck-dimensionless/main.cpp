@@ -83,7 +83,7 @@ const int REF_INIT = 1;     	                  // Number of initial refinements.
 const bool MULTIMESH = true;	                  // Multimesh?
 const int TIME_DISCR = 2;                         // 1 for implicit Euler, 2 for Crank-Nicolson.
 
-const double NEWTON_TOL_COARSE = 0.01;            // Stopping criterion for Newton on coarse mesh.
+const double NEWTON_TOL_COARSE = 7000;//0.01;            // Stopping criterion for Newton on coarse mesh.
 const double NEWTON_TOL_FINE = 0.05;              // Stopping criterion for Newton on fine mesh.
 const int NEWTON_MAX_ITER = 100;                  // Maximum allowed number of Newton iterations.
 
@@ -135,7 +135,7 @@ scalar voltage_ic(double x, double y, double &dx, double &dy) {
 }
 
 scalar concentration_ic(double x, double y, double &dx, double &dy) {
-  return C0;
+  return 1;
 }
 
 int main (int argc, char* argv[]) {
@@ -197,7 +197,7 @@ int main (int argc, char* argv[]) {
 
   // Enter Dirichlet boundary values.
   BCValues phi_bc_values;
-  phi_bc_values.add_const(BDY_TOP, VOLTAGE);
+  phi_bc_values.add_const(BDY_TOP, VOLTAGE*F/(R*T));
   phi_bc_values.add_zero(BDY_BOT);
 
   BCValues C_bc_values;
@@ -272,6 +272,7 @@ int main (int argc, char* argv[]) {
   Cordview.show(&C_space);
   phiview.show(&phi_prev_time);
   phiordview.show(&phi_space);
+  View::wait(HERMES_WAIT_KEYPRESS);
 
   // Newton's loop on the coarse mesh.
   info("Solving on coarse mesh:");
@@ -285,6 +286,8 @@ int main (int argc, char* argv[]) {
 
   Cview.show(&C_sln);
   phiview.show(&phi_sln);
+  View::wait(HERMES_WAIT_KEYPRESS);
+
 
   // Cleanup after the Newton loop on the coarse mesh.
   delete matrix_coarse;
