@@ -1,29 +1,17 @@
-#define HERMES_REPORT_ALL
+#define HERMES_REPORT_WARN
+#define HERMES_REPORT_INFO
+#define HERMES_REPORT_VERBOSE
 #define HERMES_REPORT_FILE "application.log"
 #include "hermes2d.h"
 
 using namespace RefinementSelectors;
 
-//  This example is derived from example 19-newton-timedep-heat-basic
-//  and it shows a simple way to combine automatic adaptivity in space 
-//  with the implicit Euler method for a nonlinear time-dependent PDE.
-//
-//  PDE: time-dependent heat transfer equation with nonlinear thermal
-//  conductivity:
-//
-//  du/dt - div[lambda(u)grad u] = f.
-//
-//  Domain: square (-10,10)^2.
-//
-//  BC:  Dirichlet, given by the function dir_lift() below.
-//  IC: Same function dir_lift().
-//
-//  The following parameters can be changed:
+// This test makes sure that example 23-newton-timedep-heat-adapt-basic works correctly.
 
 const int INIT_REF_NUM = 2;                       // Number of initial uniform mesh refinements.
 const int P_INIT = 2;                             // Initial polynomial degree of all mesh elements.
 const double time_step = 0.5;                     // Time step. 
-const double T_FINAL = 2.0;                       // Time interval length.
+const double T_FINAL = time_step*2;               // Time interval length.
 
 // Adaptivity
 const int UNREF_FREQ = 1;                         // Every UNREF_FREQth time step the mesh is derefined.
@@ -82,8 +70,8 @@ Real dlam_du(Real u) {
 
 // This function is used to define Dirichlet boundary conditions.
 double dir_lift(double x, double y, double& dx, double& dy) {
-  dx = (y+10)/100.;
-  dy = (x+10)/100.;
+  dx = (y+10)/10.;
+  dy = (x+10)/10.;
   return (x+10)*(y+10)/100.;
 }
 
@@ -111,7 +99,7 @@ Real heat_src(Real x, Real y)
 }
 
 // Weak forms.
-#include "forms.cpp"
+# include "forms.cpp"
 
 int main(int argc, char* argv[])
 {
@@ -154,13 +142,6 @@ int main(int argc, char* argv[])
 
   // Create a refinement selector.
   H1ProjBasedSelector selector(CAND_LIST, CONV_EXP, H2DRS_DEFAULT_ORDER);
-
-  // Visualize initial condition.
-  char title[100];
-  ScalarView view("Initial condition", new WinGeom(0, 0, 440, 350));
-  OrderView ordview("Initial mesh", new WinGeom(445, 0, 410, 350));
-  view.show(&sln_prev_time);
-  ordview.show(&space);
   
   // Time stepping loop.
   double current_time = time_step; int ts = 1;
@@ -281,16 +262,6 @@ int main(int argc, char* argv[])
     }
     while (done == false);
 
-    // Visualize the solution and mesh.
-    char title[100];
-    sprintf(title, "Solution, time %g", current_time);
-    view.set_title(title);
-    view.show_mesh(false);
-    view.show(&ref_sln);
-    sprintf(title, "Mesh, time %g", current_time);
-    ordview.set_title(title);
-    ordview.show(&space);
-
     // Copy last reference solution into sln_prev_time.
     sln_prev_time.copy(&ref_sln);
 
@@ -300,7 +271,17 @@ int main(int argc, char* argv[])
   }
   while (current_time < T_FINAL);
 
-  // Wait for all views to be closed.
-  View::wait();
-  return 0;
+  ndof = Space::get_num_dofs(&space);
+
+  printf("ndof allowed = %d\n", 140);
+  printf("ndof actual = %d\n", ndof);
+  if (ndof < 140) {      // ndofs was 132 at the time this test was created.
+    printf("Success!\n");
+    return ERR_SUCCESS;
+  }
+  else {
+    printf("Failure!\n");
+    return ERR_FAILURE;
+  }
 }
+
