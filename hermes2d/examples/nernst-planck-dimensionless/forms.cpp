@@ -86,9 +86,9 @@ Scalar Fc_cranic(int n, double *wt, Func<Scalar> *u_ext[], Func<Real> *v, Geom<R
   for (int i = 0; i < n; i++) {
     result += wt[i] * ((C_prev_newton->val[i] - C_prev_time->val[i]) * v->val[i] / (*TAU) +
         0.5 * epsilon * (C_prev_newton->dx[i] * v->dx[i] + C_prev_newton->dy[i] * v->dy[i] +
-        C_prev_time->dx[i] * v->dx[i] + C_prev_time->dy[i] * v->dy[i]) +
+        C_prev_time->dx[i] * v->dx[i] + C_prev_time->dy[i] * v->dy[i] +
         C_prev_newton->val[i] * (phi_prev_newton->dx[i] * v->dx[i] + phi_prev_newton->dy[i] * v->dy[i]) +
-        C_prev_time->val[i] * (phi_prev_time->dx[i] * v->dx[i] + phi_prev_time->dy[i] * v->dy[i]));
+        C_prev_time->val[i] * (phi_prev_time->dx[i] * v->dx[i] + phi_prev_time->dy[i] * v->dy[i])));
   }
   return result;
 }
@@ -99,8 +99,8 @@ Scalar Fphi_cranic(int n, double *wt, Func<Scalar> *u_ext[], Func<Real> *v, Geom
     Func<Scalar>* C_prev_newton = u_ext[0];
     Func<Scalar>* phi_prev_newton = u_ext[1];
     for (int i = 0; i < n; i++) {
-      result += wt[i] * (-2 * epsilon * epsilon *(phi_prev_newton->dx[i] * v->dx[i] + phi_prev_newton->dy[i] * v->dy[i]) +
-            v->val[i] * (1 - C_prev_newton->val[i]));
+      result += wt[i] * (phi_prev_newton->dx[i] * v->dx[i] + phi_prev_newton->dy[i] * v->dy[i] +
+            v->val[i] * 1 / (2 * epsilon * epsilon) * (1 - C_prev_newton->val[i]));
     }
     return result;
 }
@@ -132,7 +132,7 @@ template<class Real, class Scalar>
 Scalar J_cranic_DFphiDYc(int n, double *wt, Func<Scalar> *u_ext[], Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext) {
   Scalar result = 0;
   for (int i = 0; i < n; i++) {
-    result += wt[i] * ( -1 * u->val[i] * v->val[i]);
+    result += wt[i] * ( -1 / (2 * epsilon * epsilon) * u->val[i] * v->val[i]);
   }
   return result;
 }
@@ -141,7 +141,7 @@ template<class Real, class Scalar>
 Scalar J_cranic_DFphiDYphi(int n, double *wt, Func<Scalar> *u_ext[], Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext) {
   Scalar result = 0;
   for (int i = 0; i < n; i++) {
-    result += wt[i] * (-2 * epsilon * epsilon) * ( u->dx[i] * v->dx[i] + u->dy[i] * v->dy[i]);
+    result += wt[i] * ( u->dx[i] * v->dx[i] + u->dy[i] * v->dy[i]);
   }
   return result;
 }

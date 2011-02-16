@@ -73,7 +73,8 @@ const double L =  F / eps;	                  // Constant for equation.
 
 
 /* Simulation parameters */
-const double T_FINAL = 1;
+//const double T_FINAL = 1;
+const double T_FINAL = 3 * D/(lambda * l);
 double INIT_TAU = 0.05;
 double SCALED_INIT_TAU = INIT_TAU*D/(lambda * l);
 //double *TAU = &INIT_TAU;                          // Size of the time step
@@ -83,7 +84,7 @@ const int REF_INIT = 1;     	                  // Number of initial refinements.
 const bool MULTIMESH = true;	                  // Multimesh?
 const int TIME_DISCR = 2;                         // 1 for implicit Euler, 2 for Crank-Nicolson.
 
-const double NEWTON_TOL_COARSE = 7000;//0.01;            // Stopping criterion for Newton on coarse mesh.
+const double NEWTON_TOL_COARSE = 0.01;            // Stopping criterion for Newton on coarse mesh.
 const double NEWTON_TOL_FINE = 0.05;              // Stopping criterion for Newton on fine mesh.
 const int NEWTON_MAX_ITER = 100;                  // Maximum allowed number of Newton iterations.
 
@@ -99,7 +100,7 @@ const int STRATEGY = 0;                           // Adaptive strategy:
                                                   // STRATEGY = 2 ... refine all elements whose error is larger
                                                   //   than THRESHOLD.
                                                   // More adaptive strategies can be created in adapt_ortho_h1.cpp.
-const CandList CAND_LIST = H2D_HP_ANISO;          // Predefined list of element refinement candidates. Possible values are
+const CandList CAND_LIST = H2D_HP_ISO;          // Predefined list of element refinement candidates. Possible values are
                                                   // H2D_P_ISO, H2D_P_ANISO, H2D_H_ISO, H2D_H_ANISO, H2D_HP_ISO,
                                                   // H2D_HP_ANISO_H, H2D_HP_ANISO_P, H2D_HP_ANISO.
                                                   // See User Documentation for details.
@@ -140,7 +141,8 @@ scalar concentration_ic(double x, double y, double &dx, double &dy) {
 
 int main (int argc, char* argv[]) {
 
-  info("Scaled problem, constants: epsilon=%g, lambda=%g, tau=%g", epsilon, lambda, SCALED_INIT_TAU);
+  info("Scaled problem, constants: epsilon=%g, lambda=%g, tau=%g, tau_final=%g",
+      epsilon, lambda, SCALED_INIT_TAU, T_FINAL);
   // Load the mesh file.
   Mesh C_mesh, phi_mesh, basemesh;
   H2DReader mloader;
@@ -176,7 +178,11 @@ int main (int argc, char* argv[]) {
   //MeshView mview("Mesh", 0, 600, 800, 800);
   //mview.show(&basemesh);
 
-
+  if (basemesh.rescale(l, l)) {
+    info("Base mesh was rescaled by %g", l);
+  } else {
+    info("Base mesh was NOT rescaled");
+  }
   // When nonadaptive solution, refine the mesh.
   /*basemesh.refine_towards_boundary(BDY_TOP, REF_INIT);
   basemesh.refine_towards_boundary(BDY_BOT, REF_INIT - 1);
@@ -219,6 +225,7 @@ int main (int argc, char* argv[]) {
   WeakForm wf(2);
   // Add the bilinear and linear forms.
   if (TIME_DISCR == 1) {  // Implicit Euler.
+    error("Euler time stepping is not implemented for the dimensionless form!");
   wf.add_matrix_form(0, 0, callback(J_euler_DFcDYc), HERMES_NONSYM);
   wf.add_matrix_form(0, 1, callback(J_euler_DFcDYphi), HERMES_NONSYM);
   wf.add_matrix_form(1, 0, callback(J_euler_DFphiDYc), HERMES_NONSYM);
@@ -259,10 +266,10 @@ int main (int argc, char* argv[]) {
 
   // Visualization windows.
   char title[1000];
-  ScalarView Cview("Concentration [mol/m3]", new WinGeom(0, 0, 800, 800));
-  ScalarView phiview("Voltage [V]", new WinGeom(650, 0, 600, 600));
-  OrderView Cordview("C order", new WinGeom(0, 300, 600, 600));
-  OrderView phiordview("Phi order", new WinGeom(600, 300, 600, 600));
+  ScalarView Cview("Concentration [mol/m3]", new WinGeom(0, 0, 600, 800));
+  ScalarView phiview("Voltage [V]", new WinGeom(650, 0, 600, 800));
+  OrderView Cordview("C order", new WinGeom(0, 300, 600, 800));
+  OrderView phiordview("Phi order", new WinGeom(600, 300, 600, 800));
 
   SimpleGraph graph_time_err, graph_time_dof, graph_time_cpu, graph_time_rel_errC, graph_time_rel_errphi;
   TimePeriod cpu_time;
@@ -272,7 +279,7 @@ int main (int argc, char* argv[]) {
   Cordview.show(&C_space);
   phiview.show(&phi_prev_time);
   phiordview.show(&phi_space);
-  View::wait(HERMES_WAIT_KEYPRESS);
+  //View::wait(HERMES_WAIT_KEYPRESS);
 
   // Newton's loop on the coarse mesh.
   info("Solving on coarse mesh:");
@@ -286,7 +293,7 @@ int main (int argc, char* argv[]) {
 
   Cview.show(&C_sln);
   phiview.show(&phi_sln);
-  View::wait(HERMES_WAIT_KEYPRESS);
+  //View::wait(HERMES_WAIT_KEYPRESS);
 
 
   // Cleanup after the Newton loop on the coarse mesh.
@@ -300,8 +307,14 @@ int main (int argc, char* argv[]) {
   TAU = pid.timestep;
   info("Starting time iteration with the step %g", *TAU);
   do {
+    // Optional, for graphing..
+    if (pid.get_timestep_number() == 1) {
+      //View::wait(HERMES_WAIT_KEYPRESS);
+    }
     pid.begin_step();
     // Periodic global derefinements.
+
+
     cpu_time.tick();
     if (pid.get_timestep_number() > 1 && pid.get_timestep_number() % UNREF_FREQ == 0)
     {
@@ -430,7 +443,9 @@ int main (int argc, char* argv[]) {
           pid.get_timestep_number(), *TAU, pid.get_time());
       phiordview.set_title(title);
       phiordview.show(&phi_space);
-      //View::wait(HERMES_WAIT_KEYPRESS);
+
+
+
 
       // Clean up.
       info("delete solver");
@@ -453,11 +468,12 @@ int main (int argc, char* argv[]) {
     while (done == false);
     cpu_time.tick();
 
-    graph_time_err.add_values(pid.get_time(), err_est);
+    double real_time = pid.get_time() * lambda * l / D;
+    graph_time_err.add_values(real_time, err_est);
     graph_time_err.save("time_error.dat");
-    graph_time_dof.add_values(pid.get_time(),  Space::get_num_dofs(Hermes::vector<Space *>(&C_space, &phi_space)));
+    graph_time_dof.add_values(real_time,  Space::get_num_dofs(Hermes::vector<Space *>(&C_space, &phi_space)));
     graph_time_dof.save("time_dof.dat");
-    graph_time_cpu.add_values(pid.get_time(), cpu_time.accumulated());
+    graph_time_cpu.add_values(real_time, cpu_time.accumulated());
     graph_time_cpu.save("time_cpu.dat");
 
 
