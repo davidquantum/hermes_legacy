@@ -57,26 +57,28 @@ const double D = 10e-11; 	                  // [m^2/s] Diffusion coefficient.
 const double R = 8.31; 		                  // [J/mol*K] Gas constant.
 const double T = 293; 		                  // [K] Aboslute temperature.
 const double F = 96485.3415;	                  // [s * A / mol] Faraday constant.
-const double eps = 2.5e-2; 	                  // [F/m] Electric permeability.
+double init_eps = 2.5e-2;
+double *eps = &init_eps; 	                  // [F/m] Electric permeability.
 const double mu = D / (R * T);                    // Mobility of ions.
 const double l = 200e-6;                  // scaling const, domain thickness [m]
 const double VOLTAGE = 1;                   // [V] Applied voltage.
 const double C0 = 1200;                           // [mol/m^3] Anion and counterion concentration.
-const double lambda = sqrt(eps*R*T/(2.0*F*F*C0)); //Debye length [m]
-const double epsilon = lambda/l;
+double lambda = sqrt((*eps)*R*T/(2.0*F*F*C0)); //Debye length [m]
+double epsilon = lambda/l;
 
 // Only for nonscaled domain
 const double z = 1;		                  // Charge number.
 const double K = z * mu * F;                      // Constant for equation.
-const double L =  F / eps;	                  // Constant for equation.
+double L =  F / *eps;	                  // Constant for equation.
 
 
 
 /* Simulation parameters */
 //const double T_FINAL = 1;
-const double T_FINAL = 3 * D/(lambda * l);
+//const double T_FINAL = 3 * D/(lambda * l);
 double INIT_TAU = 0.05;
 double SCALED_INIT_TAU = INIT_TAU*D/(lambda * l);
+double TIME_SCALING = lambda * l / D;
 //double *TAU = &INIT_TAU;                          // Size of the time step
 double *TAU = &SCALED_INIT_TAU;
 const int P_INIT = 2;       	                  // Initial polynomial degree of all mesh elements.
@@ -100,7 +102,7 @@ const int STRATEGY = 0;                           // Adaptive strategy:
                                                   // STRATEGY = 2 ... refine all elements whose error is larger
                                                   //   than THRESHOLD.
                                                   // More adaptive strategies can be created in adapt_ortho_h1.cpp.
-const CandList CAND_LIST = H2D_HP_ISO;          // Predefined list of element refinement candidates. Possible values are
+const CandList CAND_LIST = H2D_HP_ANISO;          // Predefined list of element refinement candidates. Possible values are
                                                   // H2D_P_ISO, H2D_P_ANISO, H2D_H_ISO, H2D_H_ANISO, H2D_HP_ISO,
                                                   // H2D_HP_ANISO_H, H2D_HP_ANISO_P, H2D_HP_ANISO.
                                                   // See User Documentation for details.
@@ -139,16 +141,38 @@ scalar concentration_ic(double x, double y, double &dx, double &dy) {
   return 1;
 }
 
-int main (int argc, char* argv[]) {
+// Diricleht Boundary conditions for Poisson equation.
+scalar phi_essential_bc_values(double x, double y) {
+  //return ess_bdy_marker == TOP_MARKER ? VOLTAGE : 0.0;
+  double width = 100e-6/l;
+  return (VOLTAGE/2 + (x * VOLTAGE / 2 / width))*F/(R*T);
+}
 
-  info("Scaled problem, constants: epsilon=%g, lambda=%g, tau=%g, tau_final=%g",
-      epsilon, lambda, SCALED_INIT_TAU, T_FINAL);
+int main (int argc, char* argv[]) {
+  info ("Init time %g", TIME_SCALING);
+
+  // stepping
+  for (int step = 1; step < 20; step++) {
+    *eps *= (0.5);
+    lambda = sqrt((*eps)*R*T/(2.0*F*F*C0));
+    epsilon = lambda/l;
+    TIME_SCALING = lambda * l / D;
+    //info("lambda %g with step %i", lambda, step);
+    info("Scaled problem, constants: epsilon=%g, lambda=%g, tau=%g, tau_final=%g",
+         epsilon, lambda, TIME_SCALING/15, TIME_SCALING);
+    if (step < 15 /*|| step % 2 != 0*/) {
+      info("SKIPPING");
+      continue;
+    }
+
+
+
   // Load the mesh file.
   Mesh C_mesh, phi_mesh, basemesh;
   H2DReader mloader;
   mloader.load("small.mesh", &basemesh);
   
-#define COARSE
+#define BOUNDARYREFINED
 
   basemesh.refine_all_elements(1);
 #ifdef COARSE
@@ -167,6 +191,13 @@ int main (int argc, char* argv[]) {
   basemesh.refine_towards_boundary(BDY_BOT, (REF_INIT - 1) + 8); // when only p-adapt is used
   basemesh.refine_towards_boundary(BDY_BOT, REF_INIT - 1);
 #endif
+#ifdef BOUNDARYREFINED
+  basemesh.refine_all_elements(1); // when only p-adapt is used and const voltage
+  basemesh.refine_all_elements(1); // when only p-adapt is used and const voltage
+  basemesh.refine_towards_boundary(BDY_TOP, REF_INIT + 8);
+  basemesh.refine_towards_boundary(BDY_BOT, (REF_INIT - 1) + 8); // when only p-adapt is used
+  //basemesh.refine_towards_boundary(BDY_BOT, REF_INIT - 1);
+#endif
 #ifdef OTHER
   //basemesh.refine_all_elements(1); // when only p-adapt is used and const voltage
   //basemesh.refine_all_elements(1); // when only p-adapt is used and const voltage
@@ -175,8 +206,8 @@ int main (int argc, char* argv[]) {
   basemesh.refine_towards_boundary(BDY_BOT, (REF_INIT - 1) + 8); // when only p-adapt is used
   basemesh.refine_towards_boundary(BDY_BOT, REF_INIT - 1);
 #endif
-  //MeshView mview("Mesh", 0, 600, 800, 800);
-  //mview.show(&basemesh);
+  MeshView mview("Mesh", new WinGeom(0, 0, 600, 800));
+  mview.show(&basemesh);
 
   if (basemesh.rescale(l, l)) {
     info("Base mesh was rescaled by %g", l);
@@ -204,6 +235,7 @@ int main (int argc, char* argv[]) {
   // Enter Dirichlet boundary values.
   BCValues phi_bc_values;
   phi_bc_values.add_const(BDY_TOP, VOLTAGE*F/(R*T));
+  //phi_bc_values.add_function(BDY_TOP, phi_essential_bc_values);
   phi_bc_values.add_zero(BDY_BOT);
 
   BCValues C_bc_values;
@@ -285,7 +317,7 @@ int main (int argc, char* argv[]) {
   info("Solving on coarse mesh:");
   bool verbose = true;
   if (!solve_newton(coeff_vec_coarse, &dp_coarse, solver_coarse, matrix_coarse, rhs_coarse, 
-      NEWTON_TOL_COARSE, NEWTON_MAX_ITER, verbose)) error("Newton's iteration failed.");
+      NEWTON_TOL_COARSE, NEWTON_MAX_ITER, verbose, false, 1.0, 1e8)) error("Newton's iteration failed.");
 
   // Translate the resulting coefficient vector into the Solution sln.
   Solution::vector_to_solutions(coeff_vec_coarse, Hermes::vector<Space *>(&C_space, &phi_space), 
@@ -303,12 +335,12 @@ int main (int argc, char* argv[]) {
   delete[] coeff_vec_coarse;
   
   // Time stepping loop.
-  PidTimestepController pid(T_FINAL, false, SCALED_INIT_TAU);
+  PidTimestepController pid(TIME_SCALING, false, 1.0/15.0*TIME_SCALING, TIME_SCALING);
   TAU = pid.timestep;
   info("Starting time iteration with the step %g", *TAU);
   do {
     // Optional, for graphing..
-    if (pid.get_timestep_number() == 1) {
+    if (pid.get_timestep_number() == 1 || pid.get_timestep_number() == 20) {
       //View::wait(HERMES_WAIT_KEYPRESS);
     }
     pid.begin_step();
@@ -371,7 +403,7 @@ int main (int argc, char* argv[]) {
       // Newton's loop on the fine mesh.
       info("Solving on fine mesh:");
       if (!solve_newton(coeff_vec, dp, solver, matrix, rhs, 
-	  	      NEWTON_TOL_FINE, NEWTON_MAX_ITER, verbose)) error("Newton's iteration failed.");
+	  	      NEWTON_TOL_FINE, NEWTON_MAX_ITER, verbose, false, 1.0, 1e8)) error("Newton's iteration failed.");
 
 
       // Store the result in ref_sln.
@@ -424,28 +456,28 @@ int main (int argc, char* argv[]) {
       cpu_time.tick();
       // Visualize the solution and mesh.
       info("Visualization procedures: C");
-      char title[100];
-      sprintf(title, "Solution[C], time step# %d, step size %g, time %g",
-          pid.get_timestep_number(), *TAU, pid.get_time());
-      Cview.set_title(title);
-      Cview.show(&C_ref_sln);
-      sprintf(title, "Mesh[C], time step# %d, step size %g, time %g",
-          pid.get_timestep_number(), *TAU, pid.get_time());
-      Cordview.set_title(title);
-      Cordview.show(&C_space);
-      
-      info("Visualization procedures: phi");
-      sprintf(title, "Solution[phi], time step# %d, step size %g, time %g",
-          pid.get_timestep_number(), *TAU, pid.get_time());
-      phiview.set_title(title);
-      phiview.show(&phi_ref_sln);
-      sprintf(title, "Mesh[phi], time step# %d, step size %g, time %g",
-          pid.get_timestep_number(), *TAU, pid.get_time());
-      phiordview.set_title(title);
-      phiordview.show(&phi_space);
+          char title[100];
+          sprintf(title, "Solution[C], time step# %d, step size %g, time %g",
+              pid.get_timestep_number(), *TAU, pid.get_time());
+          Cview.set_title(title);
+          Cview.show(&C_ref_sln);
+          sprintf(title, "Mesh[C], time step# %d, step size %g, time %g",
+              pid.get_timestep_number(), *TAU, pid.get_time());
+          Cordview.set_title(title);
+          Cordview.show(&C_space);
+
+          info("Visualization procedures: phi");
+          sprintf(title, "Solution[phi], time step# %d, step size %g, time %g",
+              pid.get_timestep_number(), *TAU, pid.get_time());
+          phiview.set_title(title);
+          phiview.show(&phi_ref_sln);
+          sprintf(title, "Mesh[phi], time step# %d, step size %g, time %g",
+              pid.get_timestep_number(), *TAU, pid.get_time());
+          phiordview.set_title(title);
+          phiordview.show(&phi_space);
 
 
-
+      //mview.show(C_space.get_mesh());
 
       // Clean up.
       info("delete solver");
@@ -468,14 +500,16 @@ int main (int argc, char* argv[]) {
     while (done == false);
     cpu_time.tick();
 
-    double real_time = pid.get_time() * lambda * l / D;
+    double real_time = pid.get_time();// * lambda * l / D;
     graph_time_err.add_values(real_time, err_est);
-    graph_time_err.save("time_error.dat");
+    graph_time_err.save_numbered("time_error%i.dat", step);
     graph_time_dof.add_values(real_time,  Space::get_num_dofs(Hermes::vector<Space *>(&C_space, &phi_space)));
-    graph_time_dof.save("time_dof.dat");
+    graph_time_dof.save_numbered("time_dof%i.dat", step);
     graph_time_cpu.add_values(real_time, cpu_time.accumulated());
-    graph_time_cpu.save("time_cpu.dat");
+    graph_time_cpu.save_numbered("time_cpu%i.dat", step);
 
+    /*
+    */
 
     pid.end_step(Hermes::vector<Solution*> (&C_ref_sln, &phi_ref_sln), Hermes::vector<Solution*> (&C_prev_time, &phi_prev_time));
     // TODO! Time step reduction when necessary.
@@ -489,6 +523,7 @@ int main (int argc, char* argv[]) {
   } while (pid.has_next());
 
   // Wait for all views to be closed.
+  } // step for
   View::wait();
   return 0;
 }
