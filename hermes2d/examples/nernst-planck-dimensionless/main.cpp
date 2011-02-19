@@ -152,18 +152,20 @@ int main (int argc, char* argv[]) {
   info ("Init time %g", TIME_SCALING);
 
   // stepping
-  for (int step = 1; step < 20; step++) {
-    *eps *= (0.5);
+  for (int step = 0; step < 1; step++) {
+    if (step > 0) {
+      *eps *= (0.5);
+    }
     lambda = sqrt((*eps)*R*T/(2.0*F*F*C0));
     epsilon = lambda/l;
     TIME_SCALING = lambda * l / D;
-    //info("lambda %g with step %i", lambda, step);
-    info("Scaled problem, constants: epsilon=%g, lambda=%g, tau=%g, tau_final=%g",
-         epsilon, lambda, TIME_SCALING/15, TIME_SCALING);
-    if (step < 15 /*|| step % 2 != 0*/) {
+    //info("lambda %g with step %i", lambda, step);*/
+    info("Scaled problem, constants: step=%i, epsilon=%g, lambda=%g, tau=%g, tau_final=%g",
+         step, epsilon, lambda, TIME_SCALING/15, TIME_SCALING);
+    /*if (step < 24) {
       info("SKIPPING");
       continue;
-    }
+    }*/
 
 
 
@@ -172,7 +174,7 @@ int main (int argc, char* argv[]) {
   H2DReader mloader;
   mloader.load("small.mesh", &basemesh);
   
-#define BOUNDARYREFINED
+#define COARSE
 
   basemesh.refine_all_elements(1);
 #ifdef COARSE
@@ -317,7 +319,7 @@ int main (int argc, char* argv[]) {
   info("Solving on coarse mesh:");
   bool verbose = true;
   if (!solve_newton(coeff_vec_coarse, &dp_coarse, solver_coarse, matrix_coarse, rhs_coarse, 
-      NEWTON_TOL_COARSE, NEWTON_MAX_ITER, verbose, false, 1.0, 1e8)) error("Newton's iteration failed.");
+      NEWTON_TOL_COARSE, NEWTON_MAX_ITER, verbose, false, 1.0, 1e15)) error("Newton's iteration failed.");
 
   // Translate the resulting coefficient vector into the Solution sln.
   Solution::vector_to_solutions(coeff_vec_coarse, Hermes::vector<Space *>(&C_space, &phi_space), 
@@ -403,7 +405,7 @@ int main (int argc, char* argv[]) {
       // Newton's loop on the fine mesh.
       info("Solving on fine mesh:");
       if (!solve_newton(coeff_vec, dp, solver, matrix, rhs, 
-	  	      NEWTON_TOL_FINE, NEWTON_MAX_ITER, verbose, false, 1.0, 1e8)) error("Newton's iteration failed.");
+	  	      NEWTON_TOL_FINE, NEWTON_MAX_ITER, verbose, false, 1.0, 1e15)) error("Newton's iteration failed.");
 
 
       // Store the result in ref_sln.
@@ -523,6 +525,8 @@ int main (int argc, char* argv[]) {
   } while (pid.has_next());
 
   // Wait for all views to be closed.
+  View::wait(HERMES_WAIT_KEYPRESS);
+
   } // step for
   View::wait();
   return 0;
