@@ -4,14 +4,16 @@
 
 # HEX
 if(WITH_HEX)
-    # H1
 	if(H3D_REAL)
 		add_subdirectory(bridge)
-		add_subdirectory(elasticity-cubit-hex)
+		if(WITH_EXODUSII)
+			add_subdirectory(elasticity-cubit-hex)
+		endif(WITH_EXODUSII)
 		add_subdirectory(heat-conduction)
 		add_subdirectory(heat-cubit)
 		add_subdirectory(schroedinger-eigen)
-		add_subdirectory(nernst-planck-timedep-adapt)
+		add_subdirectory(hartree-fock-neweigen)
+		add_subdirectory(schroedinger-eigen-refine-towards-origin)
 	endif(H3D_REAL)
 	if(H3D_COMPLEX)
 		add_subdirectory(rough)

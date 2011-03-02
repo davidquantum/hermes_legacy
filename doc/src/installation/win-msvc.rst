@@ -2,7 +2,7 @@ Windows (MSVC)
 ==============
 
 This section describes how to build and use Hermes in Microsoft Visual C++ 2008 (Express Edition). 
-These instructions should probably work even for older versions of MS Visual C++ up to version 2003.
+These instructions should probably work even for older versions of MS Visual C++ down to version 2005.
 
 Known limitations and issues
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -28,6 +28,8 @@ Building Hermes
 
    If you have Cygwin installed, your might have an error "Coulld not create named generator Visual Studio 10". This is because your 
    cmake path is contaminated by Cygwin's cmake. Try to use absolute path for windows cmake.exe. 
+   
+   You also need to copy the file 'my_hermes_root\\CMakeVars\\MSVC\\inttypes.h' to the include folder in your dependency folder.
 
  - Open the SLN file 'my_hermes_root\\hermes.sln' and build Hermes. Actually, this step is not necessary if you plan to use Hermes in your projects rather than explore tutorials.
 
@@ -59,7 +61,7 @@ In order to use Hermes in your project, you need to do the following steps. Step
 Dependency check-list
 ~~~~~~~~~~~~~~~~~~~~~
 
-This list works for 32-bit version of Hermes. If you intend to cross-compile 64-bit version, you have to cross-compile all libraries. As the first step, create a  directory structure.
+This list works for 32-bit version of Hermes.
 	
   - In order to create the structure, execute the following command::
 
@@ -78,10 +80,11 @@ This list works for 32-bit version of Hermes. If you intend to cross-compile 64-
     - Download Python source code from http://www.python.org/ftp/python/2.6.5/Python-2.6.5.tar.bz2 and unpack it.
     - Navigate to Python-2.6.5\\PC\VS8.0\\, you will find a MSVC 8.0 sln file pcbuild.sln.
     - Open it using your version of MSVC (newer versions will automatically convert the solution file).
-    - Now build the solution (ignore any errors in optional packages) and from the same directory copy python26_d.lib to dependencies\\lib and python26_d.dll to dependencies\\bin.
+    - Now build the python project (default one) and from the same directory copy python26_d.lib to dependencies\\lib and python26_d.dll to dependencies\\bin.
     - Copy Python.h from Python-2.6.5\\Include\\ to dependencies\\include. This is for the Python library.
-    - Download Python MSI installer http://www.python.org/ftp/python/2.6.5/python-2.6.5.msi ( http://www.python.org/ftp/python/2.6.5/python-2.6.5.amd64.msi for AMD64)
-    - Install Python.
+    - Download Python MSI installer http://www.python.org/ftp/python/2.6.5/python-2.6.5.msi ( http://www.python.org/ftp/python/2.6.5/python-2.6.5.amd64.msi for AMD64.
+    - Install Python. You can install it into the same directory where you copied the downloaded source.
+	- Add the path to python.exe to your PATH environment variable.
     - Open a command prompt, execute python, and you will see something like::
 
           python.exe
@@ -108,64 +111,63 @@ This list works for 32-bit version of Hermes. If you intend to cross-compile 64-
 
             python.exe setup.py install
 
+      - Add the path to 'my_Cython_root\\bin' to your system PATH.
+
   - PTHREAD(2.8.0)
 
     - Download pthread binaries version 2.8.0 (ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-8-0-release/).
     - Copy 'lib\\pthreadVCE2.dll', 'include\\\*.h' and 'lib\\pthreadVCE2.lib' to 'bin', 'include', and 'lib' dependecy directories respectively.
 
-  - UMFPACK(ver-5.4.0)
+  - UMFPACK
 
     - UFConfig(ver-3.4.0):
 
-      - Download UFconfig source file package (http://www.cise.ufl.edu/research/sparse/UFconfig/), and unpack it. 
+      - Download the UFconfig source file package (http://www.cise.ufl.edu/research/sparse/UFconfig/), and unpack it. 
       - Copy UFconfig.h to 'include' dependecy directory.
 
     - AMD(ver-2.2.0):
 
       - Download AMD source file package (http://www.cise.ufl.edu/research/sparse/amd/).
-      - Unpack source file into a directory that has the same parent as a directory where you unpacked UFconfig.
-      - Copy the file 'my_hermes_root\\MSVC2008\\AMD.nmake' to a directory 'my_amd_directory\\Lib'.
+      - Unpack source files into a directory that has the same parent as a directory where you unpacked UFconfig.
+      - Copy the file 'my_hermes_root\\CMakeVars\\MSVC\\AMD.nmake' to a directory 'my_amd_directory\\Lib'.
       - Run MSVC command prompt and switch to 'my_amd_directory\\Lib'.
       - Compile AMD using 'nmake -f AMD.nmake'.
       - Copy 'Include\\amd.h', 'Include\\amd_internal.h', and 'Lib\\libamd.lib' to 'include', and 'lib' dependecy directories respectively.
 
-    - Download UMFPACK source file package (http://www.cise.ufl.edu/research/sparse/umfpack/).
-    - Unpack source file into a directory that has the same parent as a directory where you unpacked UFconfig.
-    - Copy the file 'my_hermes_root\\MSVC2008\\UMFPACK.nmake' to the 'my_umfpack_root\\Lib' directory.
-    - Run MSVC command prompt and switch to 'my_umfpack_root\\Lib'.
-    - Compile UMFPACK using 'nmake -f UMFPACK.nmake'. Linking might take some time, please, be patient.
-    - Copy 'libumfpack.dll', all include files, and 'libumfpack.lib' to 'bin', 'include', and 'lib' dependecy directories, respectively.
+    - UMFPACK(ver-5.4.0)
+	
+      - Download UMFPACK source file package (http://www.cise.ufl.edu/research/sparse/umfpack/).
+      - Unpack source file into a directory that has the same parent as a directory where you unpacked UFconfig.
+      - Copy the file 'my_hermes_root\\CMakeVars\\MSVC\\UMFPACK.nmake' to the 'my_umfpack_root\\Lib' directory.
+      - Run MSVC command prompt and switch to 'my_umfpack_root\\Lib'.
+      - Compile UMFPACK using 'nmake -f UMFPACK.nmake'. Linking might take some time, please, be patient.
+      - Copy 'libumfpack.dll', all include files, and 'libumfpack.lib' to 'bin', 'include', and 'lib' dependecy directories, respectively.
 
   - CMAKE
 
-    - Download CMAKE (http://www.cmake.org/cmake/resources/software.html) version 2.6.4 source, and cmake 2.8.1 binary. 
-    - Since 2.8.1 came out after MSVC10, you need to download (http://www.cmake.org/files/v2.8/CMakeVS10FindMake.cmake) and 
-      replace your_cmake_2.8.1_root\\share\\cmake-2.8\\Modules\\CMakeVS10FindMake.cmake, If you are using MSVC10. 
-    - Double click cmake-gui (2.8.1), choose your_cmake_2.6.4_root as source directory, and your_cmake_2.6.4_tmp as build directory. 
-      click configure button, wait for a while.  After configuration is done, change CMAKE_INSTALL_PREFIX as: C:\\my_work\\dependencies 
-      so that cmake is installed under the 'dependencies\\bin' and accessible from every location. 
-    - Now, go to your_cmake_2.6.4_tmp (build dir), you will find a CMAKE.sln file asociated with MSVC. Open it with MSVC08/10, and 
-      find project "INSTALL", right click, choose "Build". 
- 
+    - Download CMAKE installer(http://www.cmake.org/files/v2.8/cmake-2.8.3-win32-x86.exe) and install it.
+
+  - CLAPACK
+    - First, you need to install CLAPACK/CBLAS:
+    - Download the file clapack-3.2.1-CMAKE.tgz from http://www.netlib.org/clapack/.
+    - Use cmake to configure and build the debug version of clapack.
+    - Copy '\\clapack-3.2.1-CMAKE\\BLAS\\SRC\\Debug\\blas.lib', '\\clapack-3.2.1-CMAKE\\F2CLIBS\\libf2c\\Debug\\libf2c.lib', and '\\clapack-3.2.1-CMAKE\\SRC\\Debug\\lapack.lib' to 'lib' dependency directory.
+    - Copy the contains of '\\clapack-3.2.1-CMAKE\\INCLUDE\\' to 'include' dependency directory.
+
   - OpenGL support (optional)
 
     - If a directive NOGLUT is used, this step and all its substeps can be skipped.
     - FREEGLUT 
 
       - Download freeglut 2.4.0 (http://freeglut.sourceforge.net/) and unpack it.
-      - Open the your_freeglut_2.4.0_root\\freeglut.DSP file in MSVC08, MSVC08 will convert file into a newer format, 
-          i.e., SLN and VCPROJ (MSVC10 user could open the converted file freeglut.sln).
+      - Open the your_freeglut_2.4.0_root\\freeglut.DSP file in Visual Studio and convert it to a newer format.
       - Compile Debug or Release version. Debug version is recommended in a case of debugging.
       - Copy 'freeglut.dll', 'freeglut.h', and 'freeglut.lib' to 'bin', 'include\\GL', and 'lib' dependency directories, respectively/.
   
-  - GLEW
+    - GLEW
 
-    - Download glew 1.5.4 (http://glew.sourceforge.net/) and unpack it.
-    - Open a DSP file 'my_glew_root\\builds\\vc6\\gle_shred.dsp' and let MSVC08 to 
-        convert it (MSVC10 user could open the converted file glew_shared.sln).
-    - Switch to 'Release' version, and  build a project 'glew_shared': this will create DLL file.
-    - Copy 'my_glew_root\\bin\\glew32.dll', 'my_glew_root\\include\\GL\\\*.h', and 'my_glew_root\\lib\\glew32.lib' 
-        to 'bin', 'include\\GL', and 'lib' dependency directories respectively.
+      - Download glew Win32 precompiled binaries ver.1.5.4 (http://glew.sourceforge.net/) and unpack it.
+      - Copy 'my_glew_root\\bin\\glew32.dll', 'my_glew_root\\include\\GL\\\*.h', and 'my_glew_root\\lib\\glew32.lib' to 'bin', 'include\\GL', and 'lib' dependency directories respectively.
  	
   - AntTweakBar (optional)
 

@@ -35,7 +35,6 @@
 #include "../hermes_common/solver/epetra.h"
 #include "../hermes_common/solver/mumps.h"
 #include "../hermes_common/solver/nox.h"
-#include "../hermes_common/solver/pardiso.h"
 #include "../hermes_common/solver/petsc.h"
 #include "../hermes_common/solver/umfpack_solver.h"
 #include "../hermes_common/solver/superlu.h"
@@ -81,7 +80,7 @@
 
 #include "weakform/weakform.h"
 #include "discrete_problem.h"
-#include "weakform/forms.h"
+#include "function/forms.h"
 
 #include "integrals/integrals_h1.h"
 #include "integrals/integrals_hcurl.h"

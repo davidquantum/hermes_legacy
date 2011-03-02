@@ -16,7 +16,7 @@ const char* preconditioner = "jacobi";            // Name of the preconditioner 
                                                   // Possibilities: none, jacobi, neumann, least-squares, or a
                                                   // preconditioner from IFPACK (see solver/aztecoo.h).
 MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESOS, SOLVER_AZTECOO, SOLVER_MUMPS,
-                                                  // SOLVER_PARDISO, SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
+                                                  // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 
 // The error should be smaller than this epsilon.
 #define EPS								10e-10F
@@ -268,8 +268,7 @@ int main(int argc, char **args)
     
   // Solve the linear system.
   info("Solving.");
-  if(!solver_proj->solve());
-  	error ("Matrix solver failed.\n");
+  if(!solver_proj->solve()) error ("Matrix solver failed.\n");
 
   delete matrix;
   delete rhs;

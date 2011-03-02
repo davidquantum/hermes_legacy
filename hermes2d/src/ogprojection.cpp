@@ -26,7 +26,7 @@ void OGProjection::project_internal(Hermes::vector<Space *> spaces, WeakForm* wf
 
   // Calculate the coefficient vector.
   bool solved = solver->solve();
-  scalar* coeffs;
+  scalar* coeffs = NULL;
   if (solved)
     coeffs = solver->get_solution();
 
@@ -52,7 +52,7 @@ void OGProjection::project_global(Hermes::vector<Space *> spaces, Hermes::vector
   for (int i = 0; i < 100; i++) found[i] = 0;
   for (int i = 0; i < n; i++)
   {
-    int norm;
+    int norm = -1.0;
     if (proj_norms == Hermes::vector<ProjNormType>()) {
       ESpaceType space_type = spaces[i]->get_type();
       switch (space_type) {
@@ -67,7 +67,8 @@ void OGProjection::project_global(Hermes::vector<Space *> spaces, Hermes::vector
     if (norm == HERMES_H1_NORM)
     {
       found[i] = 1;
-      proj_wf->add_matrix_form(i, i, H1projection_biform<double, scalar>, H1projection_biform<Ord, Ord>);
+      proj_wf->add_matrix_form(i, i, (WeakForm::matrix_form_val_t)(H1projection_biform<double, scalar>), 
+                               (WeakForm::matrix_form_ord_t)(H1projection_biform<Ord, Ord>));
       proj_wf->add_vector_form(i, H1projection_liform<double, scalar>, H1projection_liform<Ord, Ord>,
                                HERMES_ANY, source_meshfns[i]);
     }

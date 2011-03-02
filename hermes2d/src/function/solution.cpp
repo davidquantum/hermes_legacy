@@ -84,6 +84,12 @@ void MeshFunction::push_transform(int son)
   update_nodes_ptr();
 }
 
+void MeshFunction::pop_transform()
+{
+  Transformable::pop_transform();
+  update_nodes_ptr();
+}
+
 //// Quad2DCheb ////////////////////////////////////////////////////////////////////////////////////
 
 static double3* cheb_tab_tri[11];
@@ -189,7 +195,7 @@ void Solution::init()
 
   for(int i = 0; i < 4; i++)
     for(int j = 0; j < 4; j++)
-      tables[i][j] = new LightArray<LightArray<Node*>*>;
+      tables[i][j] = new std::map<uint64_t, LightArray<Node*>*>;
 
   mono_coefs = NULL;
   elem_coefs[0] = elem_coefs[1] = NULL;
@@ -321,6 +327,8 @@ void Solution::copy(const Solution* sln)
     cnst[0] = sln->cnst[0];
     cnst[1] = sln->cnst[1];
   }
+
+  element = NULL;
 }
 
 
@@ -329,13 +337,12 @@ void Solution::free_tables()
   for (int i = 0; i < 4; i++)
     for (int j = 0; j < 4; j++)
       if(tables[i][j] != NULL) {
-        for(unsigned int k = 0; k < tables[i][j]->get_size(); k++) 
-          if(tables[i][j]->present(k)) {
-            for(unsigned int l = 0; l < tables[i][j]->get(k)->get_size(); l++)
-              if(tables[i][j]->get(k)->present(l))
-                ::free(tables[i][j]->get(k)->get(l));
-            delete tables[i][j]->get(k);
-          }
+        for(std::map<uint64_t, LightArray<Node*>*>::iterator it = tables[i][j]->begin(); it != tables[i][j]->end(); it++) {
+          for(unsigned int l = 0; l < it->second->get_size(); l++)
+            if(it->second->present(l))
+              ::free(it->second->get(l));
+          delete it->second;
+        }
         delete tables[i][j];
         tables[i][j] = NULL;
         elems[i][j] = NULL;
@@ -569,6 +576,7 @@ void Solution::set_coeff_vector(Space* space, PrecalcShapeset* pss, scalar* coef
 
   if(mesh == NULL) error("mesh == NULL.\n");
   init_dxdy_buffer();
+  element = NULL;
 }
 
 
@@ -805,19 +813,18 @@ void Solution::set_active_element(Element* e)
   if (cur_elem >= 4)
   {
     if(tables[cur_quad][oldest[cur_quad]] != NULL) {
-      for(unsigned int k = 0; k < tables[cur_quad][oldest[cur_quad]]->get_size(); k++) 
-        if(tables[cur_quad][oldest[cur_quad]]->present(k)) {
-          for(unsigned int l = 0; l < tables[cur_quad][oldest[cur_quad]]->get(k)->get_size(); l++)
-            if(tables[cur_quad][oldest[cur_quad]]->get(k)->present(l))
-              ::free(tables[cur_quad][oldest[cur_quad]]->get(k)->get(l));
-          delete tables[cur_quad][oldest[cur_quad]]->get(k);
+        for(std::map<uint64_t, LightArray<Node*>*>::iterator it = tables[cur_quad][oldest[cur_quad]]->begin(); it != tables[cur_quad][oldest[cur_quad]]->end(); it++) {
+          for(unsigned int l = 0; l < it->second->get_size(); l++)
+            if(it->second->present(l))
+              ::free(it->second->get(l));
+          delete it->second;
         }
-      delete tables[cur_quad][oldest[cur_quad]];
-      tables[cur_quad][oldest[cur_quad]] = NULL;
-      elems[cur_quad][oldest[cur_quad]] = NULL;
-    }
+        delete tables[cur_quad][oldest[cur_quad]];
+        tables[cur_quad][oldest[cur_quad]] = NULL;
+        elems[cur_quad][oldest[cur_quad]] = NULL;
+      }
 
-    tables[cur_quad][oldest[cur_quad]] = new LightArray<LightArray<Node*>*>;
+    tables[cur_quad][oldest[cur_quad]] = new std::map<uint64_t, LightArray<Node*>*>;
 
     cur_elem = oldest[cur_quad];
     if (++oldest[cur_quad] >= 4)

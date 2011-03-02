@@ -1,4 +1,4 @@
-project(calc-hex-h1-mf)
+project(test-calc-hex-h1-mf)
 
 include (${hermes3d_SOURCE_DIR}/CMake.common)
 set(BINARIES) 
@@ -6,9 +6,9 @@ set(BINARIES)
 macro(ADD_BIN BIN DEFINE)
 	add_executable(${BIN}		main.cpp)
 	
-  set_common_target_properties(${BIN})
-
-	set_target_properties(${BIN} PROPERTIES COMPILE_FLAGS -D${DEFINE})
+    set_common_target_properties(${BIN})
+    get_target_property(CPFL ${BIN} COMPILE_FLAGS)
+	set_target_properties(${BIN} PROPERTIES COMPILE_FLAGS "${CPFL} -D${DEFINE}")
 	set(BINARIES ${BINARIES} ${BIN})
 endmacro(ADD_BIN)
 

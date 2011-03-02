@@ -1,13 +1,11 @@
 #include "hermes2d.h"
-#include "solver_pardiso.h"
-
 
 int main(int argc, char* argv[])
 {
   // load the mesh file
   Mesh mesh;
   mesh.load("domain.mesh");
-  mesh.refine_element(0);
+  mesh.refine_element_id(0);
 
   // create an H1 space
   H1Space space(&mesh);
@@ -17,7 +15,7 @@ int main(int argc, char* argv[])
   WeakForm wf;
   wf.set_eqn("[u,v] = (2*v)");
 
-  PardisoSolver solver;
+  UmfpackSolver solver;
   Solution sln;
 
   // assemble and solve the linear system

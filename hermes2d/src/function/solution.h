@@ -61,6 +61,8 @@ public:
   /// See Transformable::push_transform.
   virtual void push_transform(int son);
 
+  virtual void pop_transform();
+  
 protected:
 
   int mode;
@@ -217,7 +219,7 @@ protected:
   /// a table from the lowest layer.
   /// The highest layer (in contrast to the PrecalcShapeset class) is represented
   /// here only by this array.
-  LightArray<LightArray<Node*>*>* tables[4][4];
+  std::map<uint64_t, LightArray<Node*>*>* tables[4][4];
 
   Element* elems[4][4];
   int cur_elem, oldest[4];

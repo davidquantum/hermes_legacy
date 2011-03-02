@@ -42,9 +42,9 @@ bool read_n_nums(char *row, int n, double values[]) {
   char delims[] = " \t\n\r";
   char *token = strtok(row, delims);
   while (token != NULL && i < n) {
-    int n;
-    sscanf(token, "%d", &n);
-    values[i++] = n;
+    double entry_buffer;
+    sscanf(token, "%lf", &entry_buffer);
+    values[i++] = entry_buffer;
 
     token = strtok(NULL, delims);
   }
@@ -54,7 +54,7 @@ bool read_n_nums(char *row, int n, double values[]) {
 
 int read_matrix_and_rhs(char *file_name, int &n, 
                         std::map<unsigned int, MatrixEntry> &mat, std::map<unsigned int, scalar> &rhs) {
-#ifndef H3D_COMPLEX
+
   FILE *file = fopen(file_name, "r");
   if (file == NULL) return ERR_FAILURE;
 
@@ -64,7 +64,7 @@ int read_matrix_and_rhs(char *file_name, int &n,
     STATE_RHS,
   } state = STATE_N;
 
-  double buffer[3];
+  double buffer[4]; //increased in size by one
   char row[MAX_ROW_LEN];
   while (fgets(row, MAX_ROW_LEN, file) != NULL) {
     switch (state) {
@@ -74,6 +74,8 @@ int read_matrix_and_rhs(char *file_name, int &n,
           state = STATE_MATRIX;
         } 
       break;
+
+#ifndef H3D_COMPLEX
 
       case STATE_MATRIX:
         if (read_n_nums(row, 3, buffer)) {
@@ -91,8 +93,10 @@ int read_matrix_and_rhs(char *file_name, int &n,
     }
   }
 
-  fclose(file);
 #else
+/*
+// set matrix and rhs without reading the file
+
   n = 3;
   mat[mat.size()] = MatrixEntry(0, 0, scalar(1, 2));
   mat[mat.size()] = MatrixEntry(1, 1, scalar(1, 4));
@@ -101,7 +105,31 @@ int read_matrix_and_rhs(char *file_name, int &n,
   rhs[0] = scalar(2, 1);
   rhs[1] = scalar(4, 1);
   rhs[2] = scalar(6, 2);
+*/
+
+//read file with complex MatrixEntry and complex rhs VectorEntry
+      case STATE_MATRIX:
+        if (read_n_nums(row, 4, buffer)) {
+          complex<double> cmplx_buffer(buffer[2], buffer[3]);
+          mat[mat.size()] = (MatrixEntry((int) buffer[0], (int) buffer[1], (scalar) cmplx_buffer));
+        }
+	else
+        state = STATE_RHS;
+      break;
+
+        case STATE_RHS:
+          if (read_n_nums(row, 3, buffer)) {
+          complex<double> cmplx_buffer(buffer[1], buffer[2]);
+            rhs[(int) buffer[0]] = (scalar) cmplx_buffer;
+          }
+        break;
+    }
+  }
+
 #endif
+
+  fclose(file);
+
   return ERR_SUCCESS;
 }
 
@@ -178,17 +206,10 @@ void solve(Solver &solver, int n) {
 int main(int argc, char *argv[]) {
   int ret = ERR_SUCCESS;
 
-#ifdef WITH_PETSC
-  // do NOT forget to call this when using PETSc solver
-  PetscInitialize(NULL, NULL, PETSC_NULL, PETSC_NULL);
-  // disable PETSc error handler
-  PetscPushErrorHandler(PetscIgnoreErrorHandler, PETSC_NULL);
-#endif
-
 #ifndef H3D_COMPLEX
   if (argc < 3) error("Not enough parameters.");
 #else
-  if (argc < 2) error("Not enough parameters.");
+  if (argc < 3) error("Not enough parameters.");
 #endif
 
   int n;
@@ -235,26 +256,6 @@ int main(int argc, char *argv[]) {
     build_matrix_block(n, ar_mat, ar_rhs, &mat, &rhs);
 
     UMFPackLinearSolver solver(&mat, &rhs);
-    solve(solver, n);
-#endif
-  }
-  else if (strcasecmp(argv[1], "pardiso") == 0) {
-#ifdef WITH_PARDISO
-    PardisoMatrix mat;
-    PardisoVector rhs;
-    build_matrix(n, ar_mat, ar_rhs, &mat, &rhs);
-
-    PardisoLinearSolver solver(&mat, &rhs);
-    solve(solver, n);
-#endif
-  }
-  else if (strcasecmp(argv[1], "pardiso-block") == 0) {
-#ifdef WITH_PARDISO
-    PardisoMatrix mat;
-    PardisoVector rhs;
-    build_matrix_block(n, ar_mat, ar_rhs, &mat, &rhs);
-
-    PardisoLinearSolver solver(&mat, &rhs);
     solve(solver, n);
 #endif
   }
@@ -324,11 +325,6 @@ int main(int argc, char *argv[]) {
   }  
   else
     ret = ERR_FAILURE;
-
-#ifdef WITH_PETSC
-  // do NOT forget to call this when using PETSc solver
-  PetscFinalize();
-#endif
 
   return ret;
 }

@@ -30,7 +30,7 @@ class HERMES_API NoxProblemInterface :
   public NOX::Epetra::Interface::Preconditioner
 {
 public:
-  NoxProblemInterface(DiscreteProblem* problem);
+  NoxProblemInterface(DiscreteProblemInterface* problem);
   virtual ~NoxProblemInterface();
 
   /// Compute and return F
@@ -57,16 +57,16 @@ public:
     Teuchos::RCP<Precond> get_precond() { return precond; }
   void set_precond(Teuchos::RCP<Precond> &pc);
 
-  DiscreteProblem* fep;           // finite element problem being solved
+  DiscreteProblemInterface* fep;           // finite element problem being solved
 
   EpetraVector init_sln;          // initial solution
   EpetraMatrix jacobian;          // jacobian (optional)
-  Teuchos::RCP<Precond> precond;  // preconditiner (optional)
+  Teuchos::RCP<Precond> precond;  // preconditioner (optional)
 
   void prealloc_jacobian();
 };
 
-NoxProblemInterface::NoxProblemInterface(DiscreteProblem* problem)
+NoxProblemInterface::NoxProblemInterface(DiscreteProblemInterface* problem)
 {
   fep = problem;
   int ndof = fep->get_num_dofs();
@@ -165,7 +165,7 @@ bool NoxProblemInterface::computePreconditioner(const Epetra_Vector &x, Epetra_O
 
 // NOX solver //////////////////////////////////////////////////////////////////////////////////////
 
-NoxSolver::NoxSolver(DiscreteProblem* problem) : IterSolver()
+NoxSolver::NoxSolver(DiscreteProblemInterface* problem) : IterSolver()
 {
 #ifdef HAVE_NOX
   // default values
@@ -206,9 +206,7 @@ NoxSolver::~NoxSolver()
 #ifdef HAVE_NOX
   // FIXME: this does not destroy the "interface_", and Trilinos 
   // complains at closing main.cpp.
-#ifndef H1D_REAL
   interface_->fep->invalidate_matrix();
-#endif
 #endif
 }
 
@@ -351,9 +349,11 @@ bool NoxSolver::solve()
      Teuchos::RCP<NOX::StatusTest::Combo> converged =
         Teuchos::rcp(new NOX::StatusTest::Combo(NOX::StatusTest::Combo::AND));
 
-     Teuchos::RCP<NOX::StatusTest::NormF> absresid =
+     if (conv_flag.absresid) {
+       Teuchos::RCP<NOX::StatusTest::NormF> absresid =
         Teuchos::rcp(new NOX::StatusTest::NormF(conv.abs_resid, conv.norm_type, conv.stype));
-     converged->addStatusTest(absresid);
+      converged->addStatusTest(absresid);
+     }
 
      if (conv_flag.relresid) {
        Teuchos::RCP<NOX::StatusTest::NormF> relresid = 
@@ -402,7 +402,7 @@ bool NoxSolver::solve()
        achieved_tol = final_pars->sublist("Direction").sublist(nl_dir).sublist("Linear Solver").sublist("Output").get("Achieved Tolerance", 0.0);
 
        // Get the Epetra_Vector with the final solution from the solver
-#if !defined(H2D_COMPLEX) && !defined(H3D_COMPLEX)
+#ifndef HERMES_COMMON_COMPLEX
        const NOX::Epetra::Group &f_grp =
        dynamic_cast<const NOX::Epetra::Group &>(solver->getSolutionGroup());
        const Epetra_Vector &f_sln =
@@ -413,7 +413,7 @@ bool NoxSolver::solve()
        delete [] sln;
        sln = new scalar[n];
        memset(sln, 0, n * sizeof(double));
-#if !defined(H2D_COMPLEX) && !defined(H3D_COMPLEX)
+#ifndef HERMES_COMMON_COMPLEX
        f_sln.ExtractCopy(sln);
 #else
 #endif

@@ -55,21 +55,22 @@ enum ButcherTableType
 
    /* EMBEDDED IMPLICIT METHODS */
 
-   Implicit_ESDIRK_TRBDF2_3_23_embedded, // From the paper Analysis and implementation 
-                                         // of TR-BDF2 by Hosea and Shampine.
-   Implicit_ESDIRK_TRX2_3_23_embedded,   // From the paper Analysis and implementation 
-                                         // of TR-BDF2 by Hosea and Shampine.
-   Implicit_SDIRK_CASH_3_23_embedded,    // From the paper Diagonally Implicit Runge-Kutta Formulae
-                                         // with Error Estimates by J.R. Cash
-   Implicit_SDIRK_CASH_5_24_embedded,    // From the paper Diagonally Implicit Runge-Kutta Formulae
-                                         // with Error Estimates by J.R. Cash
-   Implicit_SDIRK_CASH_5_34_embedded,    // From the paper Diagonally Implicit Runge-Kutta Formulae
-                                         // with Error Estimates by J.R. Cash
-   Implicit_DIRK_7_45_embedded  // Implicit embedded DIRK method pair of orders four in five (from the paper 
-                                // Fudziah Ismail et all: Embedded Pair of Diagonally Implicit Runge-Kutta  
-                                // Method for Solving Ordinary Differential Equations). The method has
-                                // 7 stages but the first one is explicit. BEWARE - THE B2 ROW IS PROBABLY 
-                                // WRONG!
+   Implicit_ESDIRK_TRBDF2_3_23_embedded,    // From the paper Analysis and implementation 
+                                            // of TR-BDF2 by Hosea and Shampine.
+   Implicit_ESDIRK_TRX2_3_23_embedded,      // From the paper Analysis and implementation 
+                                            // of TR-BDF2 by Hosea and Shampine.
+   Implicit_SDIRK_CASH_3_23_embedded,       // From the paper Diagonally Implicit Runge-Kutta Formulae
+                                            // with Error Estimates by J.R. Cash
+   Implicit_SDIRK_BILLINGTON_3_23_embedded, // From the Master Thesis by S.R. Billington: Type Insensitive
+                                            // Codes for the Solution of Stiff and Non-Stiff systems of ODE's
+   Implicit_SDIRK_CASH_5_24_embedded,       // From the paper Diagonally Implicit Runge-Kutta Formulae
+                                            // with Error Estimates by J.R. Cash
+   Implicit_SDIRK_CASH_5_34_embedded,       // From the paper Diagonally Implicit Runge-Kutta Formulae
+                                            // with Error Estimates by J.R. Cash
+   Implicit_DIRK_ISMAIL_7_45_embedded       // Implicit embedded DIRK method pair of orders four in five (from the paper 
+                                            // Fudziah Ismail et all: Embedded Pair of Diagonally Implicit Runge-Kutta  
+                                            // Method for Solving Ordinary Differential Equations). The method has
+                                            // 7 stages but the first one is explicit.
 };
 
 // General square table of real numbers.
@@ -105,6 +106,7 @@ public:
   bool is_explicit();
   bool is_diagonally_implicit();
   bool is_fully_implicit();
+  bool is_embedded();
   void switch_B_rows(); // For experimental purposes. Switches the B and B2 rows. B2 row
                         // must be nonzero, otherwise error is thrown.
 

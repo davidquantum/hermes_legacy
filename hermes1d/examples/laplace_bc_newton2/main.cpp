@@ -11,8 +11,8 @@
 //
 //  The following parameters can be changed:
 const int NEQ = 1;                      // Number of equations.
-const int NELEM = 3;                   // Number of elements.
-const double A = 0, B = 2*M_PI;             // Domain end points.
+const int NELEM = 3;                    // Number of elements.
+const double A = 0, B = 2*M_PI;         // Domain end points.
 const int P_INIT = 3;                   // Polynomial degree.
 
 // Newton's method.
@@ -20,8 +20,8 @@ double NEWTON_TOL = 1e-5;               // Tolerance.
 int NEWTON_MAX_ITER = 150;              // Max. number of Newton iterations.
 
 
-MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESOS, SOLVER_MUMPS, 
-                                                  // SOLVER_PARDISO, SOLVER_PETSC, SOLVER_UMFPACK.
+MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESOS, SOLVER_AZTECOO, SOLVER_MUMPS,
+                                                  // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 
 // Boundary conditions.
 double Val_newton_alpha_left = 2;
@@ -36,7 +36,6 @@ double f(double x) {
 
 // Weak forms for Jacobi matrix and residual.
 #include "forms.cpp"
-
 
 int main() 
 {

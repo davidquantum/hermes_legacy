@@ -21,6 +21,7 @@
 #define __HERMES_COMMON_SOLVER_H_
 
 #include "precond.h"
+#include "dpinterface.h"
                         
 #ifdef HAVE_TEUCHOS
   #include <Teuchos_RefCountPtr.hpp>
@@ -51,10 +52,6 @@
 ///   -\c UMFPack - like the MT version of SuperLU, performs scaling and factorization in one step.
 ///                 \c HERMES_REUSE_MATRIX_REORDERING_AND_SCALING has thus the same effect as
 ///                 \c HERMES_REUSE_MATRIX_REORDERING (saves the preceding symbolic analysis step).
-///   -\c Pardiso - performs reordering and scaling in one step, during the symbolic analysis. Both 
-///                 options \c HERMES_REUSE_MATRIX_REORDERING_AND_SCALING and 
-///                 \c HERMES_REUSE_MATRIX_REORDERING have the same meaning, i.e. results of the 
-///                 symbolic phase will be reused and L, U will be computed anew.
 ///   -\c MUMPS   - If \c HERMES_REUSE_MATRIX_REORDERING_AND_SCALING is set, scaling is performed
 ///                 during analysis and only factorization is repeated during each solve.
 ///                 If \c HERMES_REUSE_MATRIX_REORDERING is set, scaling is performed during 
@@ -83,8 +80,6 @@ enum FactorizationScheme
   HERMES_REUSE_FACTORIZATION_COMPLETELY       ///< Completely reuse the already performed
                                               ///< factorization.
 };
-
-class DiscreteProblem;
 
 /// Abstract class for defining solver interface.
 ///
@@ -134,11 +129,11 @@ class LinearSolver : public Solver
 class NonlinearSolver : public Solver {
   public:
     NonlinearSolver() : Solver() { dp = NULL; }
-    NonlinearSolver(DiscreteProblem* dp) : Solver() { this->dp = dp; }
+    NonlinearSolver(DiscreteProblemInterface* dp) : Solver() { this->dp = dp; }
     
   protected:
-    DiscreteProblem* dp;        // FE problem being solved (not NULL in case of using
-    // NonlinearProblem(DiscreteProblem *) ctor
+    DiscreteProblemInterface* dp; // FE problem being solved (not NULL in case of using
+                                  // NonlinearProblem(DiscreteProblemInterface *) ctor
 };
 
 /// Abstract class for defining interface for iterative solvers.

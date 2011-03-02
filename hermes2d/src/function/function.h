@@ -218,10 +218,6 @@ public:
   /// \brief Returns the current quadrature points.
   Quad2D* get_quad_2d() const { return quads[cur_quad]; }
 
-  /// See Transformable::pop_transform()
-  virtual void pop_transform();
-
-
   /// \brief Frees all precalculated tables.
   virtual void free() = 0;
 
@@ -247,7 +243,7 @@ protected:
   };
 
   /// Table of Node tables, for each possible transformation there can be a different Node table.
-  LightArray<LightArray<Node*>*>* sub_tables;
+  std::map<uint64_t, LightArray<Node*>*>* sub_tables;
 
   /// Table of nodes.
   LightArray<Node*>* nodes;
@@ -265,9 +261,9 @@ protected:
     if (sub_idx > H2D_MAX_IDX)
       handle_overflow_idx();
     else {
-      if(!sub_tables->present((unsigned int)sub_idx))
-        sub_tables->add(new LightArray<Node*>, (unsigned int)sub_idx);
-      nodes = sub_tables->get((unsigned int) sub_idx);
+      if(sub_tables->find(sub_idx) == sub_tables->end())
+        sub_tables->insert(std::pair<uint64_t, LightArray<Node*>*>(sub_idx, new LightArray<Node*>));
+      nodes = sub_tables->find(sub_idx)->second;
     }
   };
 
@@ -362,15 +358,6 @@ void Function<TYPE>::set_quad_2d(Quad2D* quad_2d)
 
   error("too many quadratures.");
 }
-
-
-template<typename TYPE>
-void Function<TYPE>::pop_transform()
-{
-  Transformable::pop_transform();
-  update_nodes_ptr();
-}
-
 
 template<typename TYPE>
 int Function<TYPE>::idx2mask[6][2] =

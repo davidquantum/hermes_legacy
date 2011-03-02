@@ -16,19 +16,17 @@
 #ifndef __HERMES_COMMON_NOX_SOLVER_H_
 #define __HERMES_COMMON_NOX_SOLVER_H_
 
-#if defined(H1D_REAL)
-#include "../../hermes1d/src/discrete_problem.h"
-#elif defined(H2D_REAL) || defined(H2D_COMPLEX)
-  #include "../../hermes2d/src/discrete_problem.h"
-#elif defined(H3D_REAL) || defined(H3D_COMPLEX)
-  #include "../../hermes3d/src/discrete_problem.h"
-#endif
-
 #include "solver.h"
 #include "epetra.h"
 
 #ifdef HAVE_NOX
   #include <NOX.H>
+    #ifdef _POSIX_C_SOURCE
+        # undef _POSIX_C_SOURCE	// pyconfig.h included by NOX_Epetra defines it
+    #endif
+    #ifdef _XOPEN_SOURCE
+        # undef _XOPEN_SOURCE	// pyconfig.h included by NOX_Epetra defines it
+    #endif
   #include <NOX_Epetra.H>
 #endif
 
@@ -40,7 +38,7 @@ class NoxProblemInterface;
 class HERMES_API NoxSolver : public IterSolver
 {
 public:
-  NoxSolver(DiscreteProblem *problem);
+  NoxSolver(DiscreteProblemInterface *problem);
   virtual ~NoxSolver();
 
   bool set_init_sln(double *ic);
@@ -70,6 +68,8 @@ public:
   void set_conv_iters(int iters)        { conv.max_iters = iters; }
   void set_conv_abs_resid(double resid) { conv_flag.absresid = 1; conv.abs_resid = resid; }
   void set_conv_rel_resid(double resid) { conv_flag.relresid = 1; conv.rel_resid = resid; }
+  void disable_abs_resid() { conv_flag.absresid = 0; }
+  void disable_rel_resid() { conv_flag.relresid = 0; }
   void set_conv_update(double update)   { conv_flag.update = 1; conv.update = update; }
   void set_conv_wrms(double rtol, double atol) 
   {

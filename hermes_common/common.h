@@ -19,7 +19,15 @@
 // Include
 //
 // common headers
+
+#ifdef _POSIX_C_SOURCE
+# undef _POSIX_C_SOURCE	// typeinfo defines it
+#endif
+#ifdef _XOPEN_SOURCE
+# undef _XOPEN_SOURCE	// typeinfo defines it
+#endif
 #include <typeinfo>
+
 #include <stdexcept>
 #include <cstdarg>
 #include <stdio.h>
@@ -57,21 +65,9 @@
 
 // Decide which version of Hermes is being compiled and import
 // the build options from the corresponding config.h file.
-#if defined(H1D_REAL) || defined(H1D_COMPLEX)
-  #ifndef CONFIG_H_INCLUDED
-    #include "../hermes1d/src/config.h"
-    #define CONFIG_H_INCLUDED
-  #endif
-#elif defined(H2D_REAL) || defined(H2D_COMPLEX)
-  #ifndef CONFIG_H_INCLUDED
-    #include "../hermes2d/src/config.h"
-    #define CONFIG_H_INCLUDED
-  #endif
-#elif defined(H3D_REAL) || defined(H3D_COMPLEX)
-  #ifndef CONFIG_H_INCLUDED
-    #include "../hermes3d/src/config.h"
-    #define CONFIG_H_INCLUDED
-  #endif
+#ifndef CONFIG_H_INCLUDED
+  #include "config.h"
+  #define CONFIG_H_INCLUDED
 #endif
 
 // Error codes
@@ -85,7 +81,6 @@ enum MatrixSolverType
    SOLVER_UMFPACK = 0, 
    SOLVER_PETSC, 
    SOLVER_MUMPS,
-   SOLVER_PARDISO,
    SOLVER_SUPERLU,
    SOLVER_AMESOS,
    SOLVER_AZTECOO
@@ -97,7 +92,6 @@ const std::string MatrixSolverNames[7] = {
   "UMFPACK",
   "PETSc",
   "MUMPS",
-  "Pardiso",
   "SuperLU",
   "Trilinos/Amesos",
   "Trilinos/AztecOO"
@@ -106,7 +100,6 @@ const std::string MatrixSolverNames[7] = {
 #define UMFPACK_NOT_COMPILED  HERMES " was not built with UMFPACK support."
 #define PETSC_NOT_COMPILED    HERMES " was not built with PETSC support."
 #define MUMPS_NOT_COMPILED    HERMES " was not built with MUMPS support."
-#define PARDISO_NOT_COMPILED  HERMES " was not built with PARDISO support."
 #define SUPERLU_NOT_COMPILED  HERMES " was not built with SUPERLU support."
 #define NOX_NOT_COMPILED      HERMES " was not built with NOX support."
 #define AMESOS_NOT_COMPILED   HERMES " was not built with AMESOS support."
@@ -144,7 +137,7 @@ enum ProjNormType
   HERMES_HDIV_NORM
 };
 
-#if defined(H2D_COMPLEX) || defined(H3D_COMPLEX)
+#ifdef HERMES_COMMON_COMPLEX
 
   #include <complex>
 
@@ -385,32 +378,32 @@ enum DG_EdgeType
                                     ///< Forms with this identifier will receive DiscontinuousFunc representations of shape
                                     ///< and ext. functions, which they may query for values on either side of given interface.
 };
-
+  
 const int HERMES_DIRICHLET_DOF = -1; // Dirichlet lift is a special DOF with number -1.
 
 /// This class makes command line arguments available to any other method in Hermes.
 class HERMES_API CommandLineArgs
 {
-  static int m_argc;
-  static char** m_argv;
-  
-  CommandLineArgs() {};
-  
   public:  
-    static void set(int argc_in, char** argv_in) { 
+    CommandLineArgs() {};
+
+    int m_argc;
+    char** m_argv;
+  
+    void set(int argc_in, char** argv_in) { 
       m_argc = argc_in; 
       m_argv = argv_in; 
     }
-    static bool check() { 
+    bool check() { 
       return (m_argc > 0);
     }
-    static void missing_error() {
+    void missing_error() {
       error("Command line arguments have not been set."); 
     }
-    static int& get_argc() { 
+    int& get_argc() { 
       return m_argc; 
     }
-    static char**& get_argv() { 
+    char**& get_argv() { 
       return m_argv; 
     }
 };

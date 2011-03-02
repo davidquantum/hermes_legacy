@@ -18,8 +18,8 @@ using namespace RefinementSelectors;
 //
 // BC:
 //
-// homogeneous neumann on symmetry axes
-// homogeneous dirichlet on zero flux boundary
+// Homogeneous neumann on symmetry axes.
+// Homogeneous dirichlet on zero flux boundary.
 // -d D_g\phi_g / d n = 8 \phi_g   on albedo boundary (homogeneous Robin).
 //
 
@@ -28,9 +28,9 @@ using namespace RefinementSelectors;
 // Adaptivity control:
 
 const int P_INIT[2] =
-  {1, 1};                                         // Initial polynomial orders for the individual solution components.
+  {6, 6};                                         // Initial polynomial orders for the individual solution components.
 const int INIT_REF_NUM[2] =
-  {1, 1};                                         // Initial uniform mesh refinement for the individual solution components.
+  {3, 3};                                         // Initial uniform mesh refinement for the individual solution components.
 const int STRATEGY = 1;                           // Adaptive strategy:
                                                   // STRATEGY = 0 ... refine elements until sqrt(THRESHOLD) times total
                                                   //   error is processed. If more elements have similar errors, refine
@@ -45,7 +45,7 @@ const bool MULTIMESH = true;                      // true = use multi-mesh, fals
                                                   // the same but the polynomial degrees can still vary.
 const double THRESHOLD_MULTI = 0.3;               // error threshold for element refinement (multi-mesh)
 const double THRESHOLD_SINGLE = 0.7;              // error threshold for element refinement (single-mesh)                                         
-const CandList CAND_LIST = H2D_HP_ISO;            // Predefined list of element refinement candidates. Possible values are
+const CandList CAND_LIST = H2D_HP_ANISO_H;        // Predefined list of element refinement candidates. Possible values are
                                                   // H2D_P_ISO, H2D_P_ANISO, H2D_H_ISO, H2D_H_ANISO, H2D_HP_ISO,
                                                   // H2D_HP_ANISO_H, H2D_HP_ANISO_P, H2D_HP_ANISO.
                                                   // See User Documentation for details.
@@ -57,21 +57,21 @@ const int MESH_REGULARITY = -1;                   // Maximum allowed level of ha
                                                   // their notoriously bad performance.
 const double CONV_EXP = 1.0;                      // Default value is 1.0. This parameter influences the selection of
                                                   // candidates in hp-adaptivity. See get_optimal_refinement() for details.
-const double ERR_STOP = 0.1;                      // Stopping criterion for adaptivity (rel. error tolerance between the
+const double ERR_STOP = 0.01;                     // Stopping criterion for adaptivity (rel. error tolerance between the
                                                   // reference and coarse mesh solution in percent).
-const int NDOF_STOP = 100000;                     // Adaptivity process stops when the number of degrees of freedom grows over
+const int NDOF_STOP = 200000;                     // Adaptivity process stops when the number of degrees of freedom grows over
                                                   // this limit. This is mainly to prevent h-adaptivity to go on forever.
 const int MAX_ADAPT_NUM = 60;                     // Adaptivity process stops when the number of adaptation steps grows over
                                                   // this limit.
-const int ADAPTIVITY_NORM = 2;                    // Specifies the norm used by H1Adapt to calculate the error and norm.
+const int ADAPTIVITY_NORM = 0;                    // Specifies the norm used by H1Adapt to calculate the error and norm.
                                                   // ADAPTIVITY_NORM = 0 ... H1 norm.
                                                   // ADAPTIVITY_NORM = 1 ... norm defined by the diagonal parts of the bilinear form.
                                                   // ADAPTIVITY_NORM = 2 ... energy norm defined by the full (non-symmetric) bilinear form.
 MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESOS, SOLVER_AZTECOO, SOLVER_MUMPS,
-                                                  // SOLVER_PARDISO, SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
+                                                  // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 
 // Variables used for reporting of results
-const int ERR_PLOT = 0;                           // Row in the convergence graphs for exact errors .
+const int ERR_PLOT = 0;                           // Row in the convergence graphs for exact errors.
 const int ERR_EST_PLOT = 1;                       // Row in the convergence graphs for error estimates.
 const int GROUP_1 = 0;                            // Row in the DOF evolution graph for group 1.
 const int GROUP_2 = 1;                            // Row in the DOF evolution graph for group 2.
@@ -89,15 +89,20 @@ const double Sr[4][2] = { {0.011, 0.13},
                           {0.09, 0.15},
                           {0.035, 0.25},
                           {0.04, 0.35}	};
-const double nSf[4][2]= { {0.0025, 0.15},
+/*const double nSf[4][2]= { {0.0025, 0.15},
                           {0.0, 0.0},
                           {0.0011, 0.1},
                           {0.004, 0.25}	};
+*/
+const double nSf[4][2]= { {0.0, 0.0},
+                          {0.0, 0.0},
+                          {0.0, 0.0},
+                          {0.0, 0.0}	};
 const double chi[4][2]= { {1, 0},
                           {1, 0},
                           {1, 0},
                           {1, 0} };
-const double Ss[4][2][2] = { 
+/*const double Ss[4][2][2] = { 
                              { { 0.0, 0.0 },
                                { 0.05, 0.0 }  },
                              { { 0.0, 0.0 },
@@ -106,6 +111,17 @@ const double Ss[4][2][2] = {
                                { 0.025, 0.0 } },
                              { { 0.0, 0.0 },
                                { 0.014, 0.0 } } 
+                           };
+*/
+const double Ss[4][2][2] = { 
+                             { { 0.0, 0.0 },
+                               { 0.0, 0.0 }  },
+                             { { 0.0, 0.0 },
+                               { 0.0, 0.0 }  },
+                             { { 0.0, 0.0 },
+                               { 0.0, 0.0 } },
+                             { { 0.0, 0.0 },
+                               { 0.0, 0.0 } } 
                            };
 
 double a = 0., b = 1., c = (a+b)/2.;
@@ -203,7 +219,8 @@ scalar essential_bc_values_2(double x, double y)
 // Functions for calculating errors:
 
 double error_total(double (*efn)(MeshFunction*, MeshFunction*, RefMap*, RefMap*),
-                   double (*nfn)(MeshFunction*, RefMap*), Hermes::vector<Solution*>& slns1, Hermes::vector<Solution*>& slns2  )
+                   double (*nfn)(MeshFunction*, RefMap*), Hermes::vector<Solution*>& slns1, 
+                   Hermes::vector<Solution*>& slns2  )
 {
   double error = 0.0, norm = 0.0;
 
@@ -314,12 +331,12 @@ int main(int argc, char* argv[])
   //selector.set_error_weights(2.1, 0.9, sqrt(2.0));
 
   // Initialize views.
-  ScalarView view1("Neutron flux 1", new WinGeom(0, 0, 500, 460));
-  ScalarView view2("Neutron flux 2", new WinGeom(510, 0, 500, 460));
-  ScalarView view3("Error in neutron flux 1", new WinGeom(280, 0, 500, 460));
-  ScalarView view4("Error in neutron flux 2", new WinGeom(780, 0, 500, 460));
-  OrderView oview1("Mesh and orders for group 1", new WinGeom(275, 0, 500, 460));
-  OrderView oview2("Mesh and orders for group 2", new WinGeom(780, 0, 500, 460));
+  ScalarView view1("Neutron flux 1", new WinGeom(0, 0, 400, 350));
+  ScalarView view2("Neutron flux 2", new WinGeom(410, 0, 400, 350));
+  OrderView oview1("Mesh and orders for group 1", new WinGeom(820, 0, 350, 300));
+  OrderView oview2("Mesh and orders for group 2", new WinGeom(1180, 0, 350, 300));
+  ScalarView view3("Error in neutron flux 1", new WinGeom(0, 405, 400, 350));
+  ScalarView view4("Error in neutron flux 2", new WinGeom(410, 405, 400, 350));
 
   // Show meshes.
   view1.show_mesh(false); view1.set_3d_mode(true);
@@ -423,9 +440,11 @@ int main(int argc, char* argv[])
       adaptivity.set_error_form(0, 1, callback(biform_0_1));
       adaptivity.set_error_form(1, 0, callback(biform_1_0));
       adaptivity.set_error_form(1, 1, callback(biform_1_1));
-    } else if (ADAPTIVITY_NORM == 1) {
-      adaptivity.set_error_form(0, 0, callback(biform_0_0));
-      adaptivity.set_error_form(1, 1, callback(biform_1_1));
+    } else {
+      if (ADAPTIVITY_NORM == 1) {
+        adaptivity.set_error_form(0, 0, callback(biform_0_0));
+        adaptivity.set_error_form(1, 1, callback(biform_1_1));
+      }
     }
     double err_est_energ_total = adaptivity.calc_err_est(slns, ref_slns) * 100;
     
@@ -445,13 +464,16 @@ int main(int argc, char* argv[])
     DiffFilter err_distrib_1(Hermes::vector<MeshFunction*>(&ex1, &sln1));
     DiffFilter err_distrib_2(Hermes::vector<MeshFunction*>(&ex2, &sln2));
 
-    info("Per-component error wrt. exact solution (H1 norm): %g%%, %g%%", err_exact_h1[0] * 100, err_exact_h1[1] * 100);
+    info("Per-component error wrt. exact solution (H1 norm): %g%%, %g%%", 
+         err_exact_h1[0] * 100, err_exact_h1[1] * 100);
     info("Total error wrt. exact solution (H1 norm): %g%%", error_h1);
     info("Total error wrt. ref. solution  (H1 norm): %g%%", err_est_h1_total);
     info("Total error wrt. ref. solution  (E norm):  %g%%", err_est_energ_total);
 
     view1.show(&sln1);
     view2.show(&sln2);
+    //view3.show(&ex1);
+    //view4.show(&ex2);
     view3.show(&err_distrib_1);
     view4.show(&err_distrib_2);
 

@@ -1,9 +1,47 @@
+# This is a sample CMake.vars file for Hermes.
+#
+# It contains compilation options that let you customize Hermes on your 
+# system. Options set here override the default ones set in CMakeLists.txt.
+#
+# NOTE: when specifying paths, always use absolute paths (such as 
+# "/home/pavel/something" instead of "~/something").
+ 
+# Enable Python
+set(WITH_PYTHON YES)
+
+# Enable UMFPACK (linear solvers, this option is YES by default)
+set(WITH_UMFPACK YES)
+    # Nothing here if using the Debian package (e.g installed via Synaptic)
+    # If you installed the .spkg file from the hpfem/solvers repository, add
+    #   set(UMFPACK_ROOT /home/pavel/solvers/umfpack)
+
+# Enable MUMPS (linear solver)
 set(WITH_MUMPS YES)
+    set(MUMPS_ROOT /home/pavel/solvers/mumps)
+
+# Enable PETSc (linear solver)
+set(WITH_PETSC YES)
+    set(PETSC_ROOT /home/pavel/solvers/petsc)
+    set(PETSC_ARCH linux-cxx)
+
+# Enable SuperLU (linear solver)
 set(WITH_SUPERLU YES)
+    # Nothing here if using the Debian package (e.g installed via Synaptic)
+    # If you installed the .spkg file from the hpfem/solvers repository, add
+    #   set(SUPERLU_ROOT /home/pavel/solvers/superlu)
+    # If you installed the multithreaded version, point SUPERLU_ROOT to its
+    # directory and notify CMake:
+    #   set(SUPERLU_ROOT /home/pavel/solvers/superlu_mt)
+    #   set(SUPERLU_MT   YES)
+    # If you selected OpenMP as the multithreading library during the 
+    # installation, you must also add:
+    #   set(WITH_OPENMP  YES)
 
+# Enable Trilinos (linear and nonlinear solvers)
 set(WITH_TRILINOS YES)
-set(TRILINOS_ROOT /opt/packages/trilinos)
+    set(TRILINOS_ROOT /opt/packages/trilinos)
 
+# Enable ExodusII and NetCDF (CUBIT mesh format support)
 SET(WITH_EXODUSII YES)
 SET(EXODUSII_ROOT /opt/packages/exodusii)
 SET(NETCDF_ROOT /opt/packages/netcdf)

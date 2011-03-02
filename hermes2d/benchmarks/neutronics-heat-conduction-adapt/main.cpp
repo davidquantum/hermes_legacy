@@ -75,7 +75,7 @@ const int NEWTON_MAX_ITER = 100;           // Maximum allowed number of Newton i
 
 // Linear system solvers for the coarse and refined problems, respectively.
 // Possibilities: SOLVER_AMESOS, SOLVER_AZTECOO, SOLVER_MUMPS,
-// SOLVER_PARDISO, SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
+// SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 // (depending on which optional solver libraries you have installed and enabled in hermes2d/CMake.vars).
 MatrixSolverType matrix_solver_coarse = SOLVER_UMFPACK;  
 MatrixSolverType matrix_solver_fine = SOLVER_UMFPACK;
@@ -367,7 +367,9 @@ int main(int argc, char* argv[])
           info("Projecting fine mesh solutions from previous time step onto globally derefined meshes.");
           OGProjection::project_global(spaces, fine_mesh_solutions, coarse_mesh_solutions, matrix_solver_coarse); 
         }
-      } 
+      }
+      delete T_fine.get_mesh();
+      delete phi_fine.get_mesh();
     }
 
     // Adaptivity loop:
@@ -411,6 +413,9 @@ int main(int argc, char* argv[])
                        coeff_vec, matrix_solver_fine);
         
         // Deallocate the previous fine mesh.
+        // FIXME: This is terribly non-transparent. Solution::vector_to_solutions (called few lines below) deletes the solution's mesh 
+        // (and makes Solution::own_mesh = false), so phi_fine.get_mesh() actually points to memory originally allocated by phi's ref_space 
+        // (which however does not exist any more at this point as it gets deallocated at the end of the loop).
         delete T_fine.get_mesh();
         delete phi_fine.get_mesh();
       }
@@ -507,6 +512,9 @@ int main(int argc, char* argv[])
       }
       
       delete adaptivity;
+      
+      for (unsigned int i = 0; i < ref_spaces->size(); i++)
+        delete ref_spaces->at(i); // Mesh dynamically allocated for each space is held by the corresponding reference solution.
       delete ref_spaces;
     }
     while (!done);
@@ -532,7 +540,10 @@ int main(int argc, char* argv[])
     T_prev_time.copy(&T_fine);
     phi_prev_time.copy(&phi_fine);
   }
-   
+  
+  delete T_fine.get_mesh();
+  delete phi_fine.get_mesh();
+  
   delete rhs_coarse;
   delete matrix_coarse;
   delete solver_coarse;

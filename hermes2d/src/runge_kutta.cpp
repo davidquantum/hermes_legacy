@@ -19,35 +19,57 @@
 
 // TODO LIST: 
 //
-// (1) Incorporate spatial adaptivity into the time stepping.
+// BUG: If time-dependent Ditichlet boundary conditions are used, the 
+//      Dirichlet lift is not updated for different stage times as it should 
+//      be. 
 //
-// (2) Enable more equations than one. Right now rk_time_step() does not 
+// (1) With explicit and diagonally implicit methods, the matrix is treated
+//     in the same way as with fully implicit ones. To make this more 
+//     efficient, with explicit and diagonally implicit methods one should 
+//     first only solve for the upper left block, then eliminate all blocks 
+//     under it, then solve for block at position 22, eliminate all blocks 
+//     under it, etc. Currently this is not done and everything is left to 
+//     the matrix solver.   
+//
+// (2) In example 03-timedep-adapt-space-and-time with implicit Euler 
+//     method, Newton's method takes much longer than in 01-timedep-adapt-space-only
+//     (that also uses implicit Euler method). This means that the initial guess for 
+//     the K_vector should be improved (currently it is zero).
+//
+// (3) At the end of rk_time_step(), the previous time level solution is 
+//     projected onto the space of the new time-level solution so that 
+//     it can be added to the stages. This projection is slow so we should 
+//     find a way to do this differently. In any case, the projection 
+//     is not necessary when no adaptivity in space takes place and the 
+//     two spaces are the same (but it is done anyway).
+//
+// (4) Enable more equations than one. Right now rk_time_step() does not 
 //     work for systems.
 //
-// (3) Enable all other matrix solvers, so far UMFPack is hardwired here.
+// (5) Enable all other matrix solvers, so far UMFPack is hardwired here.
 //
-// (4) We do not take advantage of the fact that all blocks in the 
+// (6) We do not take advantage of the fact that all blocks in the 
 //     Jacobian matrix have the same structure. Thus it is enough to 
 //     assemble the matrix M (one block) and copy the sparsity structure
 //     into all remaining nonzero blocks (and diagonal blocks). Right 
 //     now, the sparsity structure is created expensively in each block 
 //     again.
 //
-// (5) If space does not change, the sparsity does not change. Right now 
+// (7) If space does not change, the sparsity does not change. Right now 
 //     we discard everything at the end of every time step, we should not 
 //     do it.  
 //
-// (6) If the problem does not depend explicitly on time, then all the blocks 
+// (8) If the problem does not depend explicitly on time, then all the blocks 
 //     in the Jacobian matrix of the stationary residual are the same up 
 //     to a multiplicative constant. Thus they do not have to be aassembled 
 //     from scratch.
 // 
-// (7) If the problem is linear, then the Jacobian is constant. If Space 
+// (9) If the problem is linear, then the Jacobian is constant. If Space 
 //     does not change between time steps, we should keep it. 
 
 void create_stage_wf(double current_time, double time_step, ButcherTable* bt, 
                      DiscreteProblem* dp, WeakForm* stage_wf_left, 
-                     WeakForm* stage_wf_right) 
+                     WeakForm* stage_wf_right, Solution** stage_time_sol) 
 {
   // First let's do the mass matrix (only one block ndof times ndof).
   WeakForm::MatrixFormVol mfv_00;
@@ -60,7 +82,10 @@ void create_stage_wf(double current_time, double time_step, ButcherTable* bt,
   mfv_00.ext = Hermes::vector<MeshFunction*> ();
   mfv_00.scaling_factor = 1.0;
   mfv_00.u_ext_offset = 0;
-  stage_wf_left->add_matrix_form(&mfv_00);
+  mfv_00.adapt_eval = false;
+  mfv_00.adapt_order_increase = -1;
+  mfv_00.adapt_rel_error_tol = -1;
+  stage_wf_left->add_matrix_form_internal(&mfv_00);
 
   // In the rest we will take the stationary jacobian and residual forms 
   // (right-hand side) and use them to create a block Jacobian matrix of
@@ -81,7 +106,6 @@ void create_stage_wf(double current_time, double time_step, ButcherTable* bt,
   // WARNING - THIS IS A TEMPORARY HACK. THE STAGE TIME SHOULD BE ENTERED
   // AS A NUMBER, NOT IN THIS WAY. IT WILL BE ADDED AFTER EXISTING EXTERNAL
   // SOLUTIONS IN ExtData.
-  Solution** stage_time_sol = new Solution*[num_stages];
   for (int i = 0; i < num_stages; i++) {
     stage_time_sol[i] = new Solution(mesh);
     stage_time_sol[i]->set_const(mesh, current_time + bt->get_C(i)*time_step);
@@ -124,9 +148,14 @@ void create_stage_wf(double current_time, double time_step, ButcherTable* bt,
         // Set offset for u_ext[] external solutions.
         mfv_ij.u_ext_offset = i;
 
+        // This form will not be integrated adaptively.
+        mfv_ij.adapt_eval = false;
+        mfv_ij.adapt_order_increase = -1;
+        mfv_ij.adapt_rel_error_tol = -1;
+
         // Add the matrix form to the corresponding block of the
         // stage Jacobian matrix.
-        stage_wf_right->add_matrix_form(&mfv_ij);
+        stage_wf_right->add_matrix_form_internal(&mfv_ij);
       }
     }
   }
@@ -158,9 +187,14 @@ void create_stage_wf(double current_time, double time_step, ButcherTable* bt,
         // Set offset for u_ext[] external solutions.
         mfs_ij.u_ext_offset = i;
 
+        // This form will not be integrated adaptively.
+        mfs_ij.adapt_eval = false;
+        mfs_ij.adapt_order_increase = -1;
+        mfs_ij.adapt_rel_error_tol = -1;
+
         // Add the matrix form to the corresponding block of the
         // stage Jacobian matrix.
-        stage_wf_right->add_matrix_form_surf(&mfs_ij);
+        stage_wf_right->add_matrix_form_surf_internal(&mfs_ij);
       }
     }
   }
@@ -190,9 +224,14 @@ void create_stage_wf(double current_time, double time_step, ButcherTable* bt,
       // Set offset for u_ext[] external solutions.
       vfv_i.u_ext_offset = i;
 
+      // This form will not be integrated adaptively.
+      vfv_i.adapt_eval = false;
+      vfv_i.adapt_order_increase = -1;
+      vfv_i.adapt_rel_error_tol = -1;
+
       // Add the matrix form to the corresponding block of the
       // stage Jacobian matrix.
-      stage_wf_right->add_vector_form(&vfv_i);
+      stage_wf_right->add_vector_form_internal(&vfv_i);
     }
   }
 
@@ -221,9 +260,14 @@ void create_stage_wf(double current_time, double time_step, ButcherTable* bt,
       // Set offset for u_ext[] external solutions.
       vfs_i.u_ext_offset = i;
 
+      // This form will not be integrated adaptively.
+      vfs_i.adapt_eval = false;
+      vfs_i.adapt_order_increase = -1;
+      vfs_i.adapt_rel_error_tol = -1;
+
       // Add the matrix form to the corresponding block of the
       // stage Jacobian matrix.
-      stage_wf_right->add_vector_form_surf(&vfs_i);
+      stage_wf_right->add_vector_form_surf_internal(&vfs_i);
     }
   }
 }
@@ -242,8 +286,8 @@ void multiply_as_diagonal_block_matrix(UMFPackMatrix* matrix, int num_blocks,
 
 bool HERMES_RESIDUAL_AS_VECTOR_RK = true;
 bool rk_time_step(double current_time, double time_step, ButcherTable* const bt,
-                  Solution* sln, Space* sln_space, Solution* error_fn, DiscreteProblem* dp, 
-                  MatrixSolverType matrix_solver,
+                  Solution* sln_time_prev, Solution* sln_time_new, Solution* error_fn, 
+                  DiscreteProblem* dp, MatrixSolverType matrix_solver,
                   bool verbose, bool is_linear, double newton_tol, int newton_max_iter,
                   double newton_damping_coeff, double newton_max_allowed_residual_norm)
 {
@@ -257,11 +301,8 @@ bool rk_time_step(double current_time, double time_step, ButcherTable* const bt,
   int num_stages = bt->get_size();
 
   // Check whether the user provided a nonzero B2-row if he wants temporal error estimation.
-  if(error_fn != NULL) {
-    double b2_coeff_sum = 0;
-    for (int i=0; i < num_stages; i++) b2_coeff_sum += fabs(bt->get_B2(i)); 
-    if (b2_coeff_sum < 1e-10) 
-      error("error_fn != NULL but the B2 row in the Butcher's table is zero in rk_time_step().");
+  if(error_fn != NULL) if (bt->is_embedded() == false) {
+    error("rk_time_step(): R-K method must be embedded if temporal error estimate is requested.");
   }
 
   // Matrix for the time derivative part of the equation (left-hand side).
@@ -292,7 +333,11 @@ bool rk_time_step(double current_time, double time_step, ButcherTable* const bt,
   WeakForm stage_wf_left;                   // For the matrix M (size ndof times ndof).
   WeakForm stage_wf_right(num_stages);      // For the rest of equation (written on the right),
                                             // size num_stages*ndof times num_stages*ndof.
-  create_stage_wf(current_time, time_step, bt, dp, &stage_wf_left, &stage_wf_right); 
+
+  Solution** stage_time_sol = new Solution*[num_stages];
+                                            // This array will be filled by artificially created
+                                            // solutions to represent stage times.
+  create_stage_wf(current_time, time_step, bt, dp, &stage_wf_left, &stage_wf_right, stage_time_sol); 
 
   // Initialize discrete problems for the assembling of the
   // matrix M and the stage Jacobian matrix and residual.
@@ -411,14 +456,17 @@ bool rk_time_step(double current_time, double time_step, ButcherTable* const bt,
   // If max number of iterations was exceeded, fail.
   if (it >= newton_max_iter) {
     if (verbose) info("Maximum allowed number of Newton iterations exceeded, returning false.");
+
     return false;
   }
 
   // Project previous time level solution on the stage space,
   // to be able to add them together. The result of the projection 
   // will be stored in the vector coeff_vec.
+  // FIXME - this projection is slow and it is not needed when the 
+  //         spaces are the same (if spatial adaptivity does not take place). 
   scalar* coeff_vec = new scalar[ndof];
-  OGProjection::project_global(K_space, sln, coeff_vec, matrix_solver);
+  OGProjection::project_global(K_space, sln_time_prev, coeff_vec, matrix_solver);
 
   // Calculate new time level solution in the stage space (u_{n+1} = u_n + h \sum_{j=1}^s b_j k_j).
   for (int i = 0; i < ndof; i++) {
@@ -426,7 +474,7 @@ bool rk_time_step(double current_time, double time_step, ButcherTable* const bt,
       coeff_vec[i] += time_step * bt->get_B(j) * K_vector[j*ndof + i];
     }
   }
-  Solution::vector_to_solution(coeff_vec, K_space, sln);
+  Solution::vector_to_solution(coeff_vec, K_space, sln_time_new);
 
   // If error_fn is not NULL, use the B2-row in the Butcher's
   // table to calculate the temporal error estimate.
@@ -453,8 +501,10 @@ bool rk_time_step(double current_time, double time_step, ButcherTable* const bt,
   // Delete all residuals.
   for (int i = 0; i < num_stages; i++) delete residuals[i];
 
-  // TODO: Delete stage_wf, in particular its external solutions
-  // stage_time_sol[i], i = 0, 1, ..., num_stages-1.
+  // Delete artificial Solutions with stage times.
+  for (int i = 0; i < num_stages; i++)
+    delete stage_time_sol[i];
+  delete [] stage_time_sol;
 
   // Clean up.
   delete [] K_vector;
@@ -467,12 +517,13 @@ bool rk_time_step(double current_time, double time_step, ButcherTable* const bt,
 
 // This is the same as the rk_time_step() function above but it does not have the error_fn parameter.
 bool rk_time_step(double current_time, double time_step, ButcherTable* const bt,
-                  Solution* sln, Space* sln_space, DiscreteProblem* dp, MatrixSolverType matrix_solver,
-                  bool verbose, bool is_linear, double newton_tol, int newton_max_iter,
+                  Solution* sln_time_prev, Solution* sln_time_new, DiscreteProblem* dp, 
+                  MatrixSolverType matrix_solver, bool verbose, bool is_linear, 
+                  double newton_tol, int newton_max_iter,
                   double newton_damping_coeff, double newton_max_allowed_residual_norm) 
 {
   return rk_time_step(current_time, time_step, bt,
-	              sln, sln_space, NULL, dp, matrix_solver,
+	              sln_time_prev, sln_time_new, NULL, dp, matrix_solver,
 	              verbose, is_linear, newton_tol, newton_max_iter,
                       newton_damping_coeff, newton_max_allowed_residual_norm);
 }

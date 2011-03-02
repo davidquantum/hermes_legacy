@@ -49,7 +49,7 @@ const double ERR_STOP = 1e-4;                     // Stopping criterion for adap
 const int NDOF_STOP = 60000;                      // Adaptivity process stops when the number of degrees of freedom grows
                                                   // over this limit. This is to prevent h-adaptivity to go on forever.
 MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESOS, SOLVER_AZTECOO, SOLVER_MUMPS,
-                                                  // SOLVER_PARDISO, SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
+                                                  // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 
 // Exact solution.
 static double fn(double x, double y)
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
   // Avoid zero ndof situation.
   if (P_INIT == 1) {
     if (is_hp(CAND_LIST)) P_INIT++;
-    else mesh.refine_element(0, 0);
+    else mesh.refine_element_id(0, 0);
   }
 
   // Enter boundary markers.

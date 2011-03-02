@@ -34,11 +34,13 @@
 
 static int find_position(int *Ai, int Alen, int idx) {
   _F_
+  assert (Ai != NULL);
+  assert (Alen > 0);
   assert (idx >= 0);
   
   register int lo = 0, hi = Alen - 1, mid;
   
-  while (1) 
+  while (true) 
   {
     mid = (lo + hi) >> 1;
     
@@ -95,8 +97,6 @@ void CSCMatrix::multiply_with_scalar(scalar value)
 void CSCMatrix::alloc() {
   _F_
   assert(pages != NULL);
-  if (size <= 0)
-      error("UMFPack failed, matrix size must be greater than 0.");
 
   // initialize the arrays Ap and Ai
   Ap = new int [size + 1];
@@ -271,6 +271,24 @@ bool CSCMatrix::dump(FILE *file, const char *var_name, EMatrixDumpFormat fmt) {
 
       return true;
 
+    case DF_MATRIX_MARKET:
+    {
+      fprintf(file,"%%%%MatrixMarket matrix coordinate real symmetric\n");
+      int nnz_sym=0;
+      for (int j = 0; j < (int)size; j++)
+        for (int i = Ap[j]; i < Ap[j + 1]; i++)
+          if (j <= Ai[i]) nnz_sym++;
+      fprintf(file,"%d %d %d\n", size, size, nnz_sym);
+      for (int j = 0; j < (int)size; j++)
+        for (int i = Ap[j]; i < Ap[j + 1]; i++)
+          // The following line was replaced with the one below, because it gave a warning 
+	  // to cause code abort at runtime. 
+          //if (j <= Ai[i]) fprintf(file, "%d %d %24.15e\n", Ai[i]+1, j+1, Ax[i]);
+          if (j <= Ai[i]) fprintf(file, "%d %d " SCALAR_FMT "\n", Ai[i] + 1, j + 1, SCALAR(Ax[i]));
+
+      return true;
+    }
+
     case DF_HERMES_BIN: 
     {
       hermes_fwrite("H3DX\001\000\000\000", 1, 8, file);
@@ -429,7 +447,7 @@ bool UMFPackVector::dump(FILE *file, const char *var_name, EMatrixDumpFormat fmt
 
 // UMFPack solver //////
 
-#if !defined (H2D_COMPLEX) && !defined (H3D_COMPLEX)
+#ifndef HERMES_COMMON_COMPLEX
   // real case
   #define umfpack_symbolic(m, n, Ap, Ai, Ax, S, C, I)   umfpack_di_symbolic(m, n, Ap, Ai, Ax, S, C, I)
   #define umfpack_numeric(Ap, Ai, Ax, S, N, C, I)       umfpack_di_numeric(Ap, Ai, Ax, S, N, C, I)

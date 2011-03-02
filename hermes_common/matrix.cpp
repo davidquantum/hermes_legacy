@@ -27,7 +27,6 @@
 #include "solver/umfpack_solver.h"
 #include "solver/superlu.h"
 #include "solver/amesos.h"
-#include "solver/pardiso.h"
 #include "solver/petsc.h"
 #include "solver/mumps.h"
 #include "solver/nox.h"
@@ -121,10 +120,8 @@ double vec_dot(double *r, double *s, int n_dof)
 double vec_dot(Vector *r, Vector *s, int n_dof)
 {
   double result = 0;
-#ifndef H2D_COMPLEX
-#ifndef H3D_COMPLEX
+#ifndef HERMES_COMMON_COMPLEX
   for (int i=0; i < n_dof; i++) result += r->get(i)*s->get(i);
-#endif
 #endif
   return result;
 }
@@ -231,11 +228,6 @@ SparseMatrix* create_matrix(MatrixSolverType matrix_solver)
         return new MumpsMatrix;
         break;
       }
-    case SOLVER_PARDISO: 
-      {
-        return new PardisoMatrix;
-        break;
-      }
     case SOLVER_PETSC: 
       {
         return new PetscMatrix;
@@ -285,13 +277,6 @@ Solver* create_linear_solver(MatrixSolverType matrix_solver, Matrix* matrix, Vec
         else return new MumpsSolver(static_cast<MumpsMatrix*>(matrix), static_cast<MumpsVector*>(rhs_dummy)); 
         break;
       }
-    case SOLVER_PARDISO: 
-      {
-        info("Using Pardiso."); 
-        if (rhs != NULL) return new PardisoLinearSolver(static_cast<PardisoMatrix*>(matrix), static_cast<PardisoVector*>(rhs));
-        else return new PardisoLinearSolver(static_cast<PardisoMatrix*>(matrix), static_cast<PardisoVector*>(rhs_dummy));
-        break;
-      }
     case SOLVER_PETSC: 
       {
         info("Using PETSc.");        
@@ -333,11 +318,6 @@ Vector* create_vector(MatrixSolverType matrix_solver)
     case SOLVER_MUMPS: 
       {
         return new MumpsVector;
-        break;
-      }
-    case SOLVER_PARDISO: 
-      {
-        return new PardisoVector;
         break;
       }
     case SOLVER_PETSC: 
