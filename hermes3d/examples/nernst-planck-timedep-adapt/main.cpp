@@ -31,9 +31,9 @@ double INIT_TAU = 0.1;
 double *TAU = &INIT_TAU;                          // Size of the time step.
 const int REF_INIT = 3;     	                  // Number of initial refinements.
 
-const int P_INIT_X = 3,
-          P_INIT_Y = 3,
-          P_INIT_Z = 3;                           // Initial orders.
+const int P_INIT_X = 2,
+          P_INIT_Y = 2,
+          P_INIT_Z = 2;                           // Initial orders.
 const bool MULTIMESH = false;	                  // Multimesh?
 const int TIME_DISCR = 1;                         // 1 for implicit Euler, 2 for Crank-Nicolson.
 
@@ -45,7 +45,7 @@ const int UNREF_FREQ = 1;                         // every UNREF_FREQth time ste
 const double THRESHOLD = 0.3;                     // This is a quantitative parameter of the adapt(...) function and
                                                   // it has different meanings for various adaptive strategies (see below).
 const double ERR_STOP = 5;                        // Stopping criteria
-const int NDOF_STOP = 8000;                       // To prevent adaptivity from going on forever.
+const int NDOF_STOP = 25000;                       // To prevent adaptivity from going on forever.
 /*const int STRATEGY = 0;                         // Adaptive strategy:
                                                   // STRATEGY = 0 ... refine elements until sqrt(THRESHOLD) times total
                                                   //   error is processed. If more elements have similar errors, refine
@@ -249,17 +249,17 @@ int main (int argc, char* argv[]) {
         if (as > 1) {
           // Now deallocate the previous mesh
           info("Deallocating the previous mesh");
-          //delete C_ref_sln->get_mesh();
-          //delete phi_ref_sln->get_mesh();
-          //delete C_ref_sln;
-          //delete phi_ref_sln;
+          delete C_ref_sln->get_mesh();
+          delete phi_ref_sln->get_mesh();
+          delete C_ref_sln;
+          delete phi_ref_sln;
         }
-        /*TODO TEMP */
+        /*TODO TEMP 
         if (pid.get_timestep_number() > 1) {
 
         delete C_ref_sln;
         delete phi_ref_sln;
-        }
+        }*/
 
         info("Solving on fine mesh:");
         if (!solve_newton(coeff_vec, dp, solver, matrix, rhs,
@@ -327,7 +327,6 @@ int main (int argc, char* argv[]) {
         delete ref_spaces;
         delete dp;
         delete[] coeff_vec;
-        done = true;
       } while (!done);
       out_fn_vtk(C_ref_sln,"C_sln", pid.get_timestep_number());
       out_fn_vtk(phi_ref_sln,"phi_sln", pid.get_timestep_number());

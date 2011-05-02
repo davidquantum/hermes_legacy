@@ -139,8 +139,8 @@ int main (int argc, char* argv[]) {
   // When nonadaptive solution, refine the mesh.
   basemesh.refine_towards_boundary(BDY_TOP, REF_INIT);
   basemesh.refine_towards_boundary(BDY_BOT, REF_INIT - 1);
-  basemesh.refine_all_elements(1);
-  basemesh.refine_all_elements(1);
+  //basemesh.refine_all_elements(1);
+  //basemesh.refine_all_elements(1);
   C_mesh.copy(&basemesh);
   phi_mesh.copy(&basemesh);
 
@@ -226,6 +226,7 @@ int main (int argc, char* argv[]) {
   Cordview.show(&C_space);
   phiview.show(&phi_prev_time);
   phiordview.show(&phi_space);
+      //View::wait(HERMES_WAIT_KEYPRESS);
 
   // Newton's loop on the coarse mesh.
   info("Solving on coarse mesh:");

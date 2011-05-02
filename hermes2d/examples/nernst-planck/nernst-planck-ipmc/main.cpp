@@ -494,16 +494,20 @@ int main (int argc, char* argv[]) {
           pid.get_timestep_number(), *TAU, pid.get_time());
       Cview.set_title(title);
       Cview.show(&C_ref_sln);
+      Cview.save_numbered_screenshot("C%i.bmp", pid.get_timestep_number());
       sprintf(title, "Mesh[C], time step# %d, step size %g, time %g",
           pid.get_timestep_number(), *TAU, pid.get_time());
       Cordview.set_title(title);
       Cordview.show(&C_space);
       
+
+
       info("Visualization procedures: phi");
       sprintf(title, "Solution[phi], time step# %d, step size %g, time %g",
           pid.get_timestep_number(), *TAU, pid.get_time());
       phiview.set_title(title);
       phiview.show(&phi_ref_sln);
+      phiview.save_numbered_screenshot("phi%i.bmp", pid.get_timestep_number());
       sprintf(title, "Mesh[phi], time step# %d, step size %g, time %g",
           pid.get_timestep_number(), *TAU, pid.get_time());
       phiordview.set_title(title);
@@ -563,9 +567,12 @@ int main (int argc, char* argv[]) {
     u2_prev_time.copy(&u2_ref_sln);
 
     info("Von Mises filter");
-    VonMisesFilter stress(Hermes::vector<MeshFunction *>(&u1_prev_time, &u2_prev_time), mech_lambda, mech_mu);
-    deformationview.show_mesh(false);
-    //deformationview.show(&stress, HERMES_EPS_HIGH, H2D_FN_VAL_0, &u1_prev_time, &u2_prev_time, 1.5e5);
+    VonMisesFilter stress(Hermes::vector<MeshFunction *>(&u1_ref_sln, &u2_ref_sln), mech_lambda, mech_mu);
+    info("stress mesh pointer %i", stress.get_mesh());
+    info("u1 mesh pointer %i", u1_ref_sln.get_mesh());
+    info("u2 mesh pointer %i", u2_ref_sln.get_mesh());
+    //deformationview.show_mesh(false);
+    //deformationview.show(&stress, HERMES_EPS_HIGH, H2D_FN_VAL_0, &u1_ref_sln, &u2_ref_sln, 1.5e5);
     //deformationview.show(&stress);
 
   } while (pid.has_next());
