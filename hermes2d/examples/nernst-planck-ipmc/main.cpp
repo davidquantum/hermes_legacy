@@ -52,7 +52,8 @@ using namespace RefinementSelectors;
 #define SCREENSHOT_NO
 
 #define TWO_BASE_MESH
-
+#define NOHIGH_AR
+#define P_ADAPT
 /*** Fundamental coefficients ***/
 const double D = 10e-11; 	                  // [m^2/s] Diffusion coefficient.
 const double R = 8.31; 		                  // [J/mol*K] Gas constant.
@@ -97,7 +98,7 @@ const int STRATEGY = 1;                           // Adaptive strategy:
                                                   // STRATEGY = 2 ... refine all elements whose error is larger
                                                   //   than THRESHOLD.
                                                   // More adaptive strategies can be created in adapt_ortho_h1.cpp.
-const CandList CAND_LIST = H2D_HP_ANISO;          // Predefined list of element refinement candidates. Possible values are
+const CandList CAND_LIST = H2D_P_ANISO;          // Predefined list of element refinement candidates. Possible values are
                                                   // H2D_P_ISO, H2D_P_ANISO, H2D_H_ISO, H2D_H_ANISO, H2D_HP_ISO,
                                                   // H2D_HP_ANISO_H, H2D_HP_ANISO_P, H2D_HP_ANISO.
                                                   // See User Documentation for details.
@@ -162,6 +163,12 @@ int main (int argc, char* argv[]) {
   basemesh_electrochem.refine_towards_boundary(BDY_BOT, REF_INIT - 1);
   basemesh_electrochem.refine_all_elements(1);
 
+#ifdef P_ADAPT
+  basemesh_electrochem.refine_towards_boundary(BDY_BOT, 2);
+  basemesh_electrochem.refine_towards_boundary(BDY_TOP, 2);
+#endif
+
+
 
   C_mesh.copy(&basemesh_electrochem);
   phi_mesh.copy(&basemesh_electrochem);
@@ -171,8 +178,14 @@ int main (int argc, char* argv[]) {
     basemesh_deformation.refine_all_elements(2); //vertical
   }
     //extra for high aspect ratio
+#ifdef HIGH_AR
     basemesh_deformation.refine_all_elements(2);
+#endif
 
+#ifdef P_ADAPT
+  //basemesh_deformation.refine_towards_boundary(BDY_BOT, 2);
+  //basemesh_deformation.refine_towards_boundary(BDY_TOP, 2);
+#endif
 
   u1_mesh.copy(&basemesh_deformation);
   u2_mesh.copy(&basemesh_deformation);
@@ -312,12 +325,12 @@ int main (int argc, char* argv[]) {
   OrderView u2ordview("u2 order", new WinGeom(830, 470, 600, 400));
 
   //Graphs
-  SimpleGraph graph_time_dof;
-
+  SimpleGraph graph_time_dof, graph_time_time;
+  TimePeriod timer;
   // Visualize the solution.
   ScalarView deformationview("Von Mises stress [Pa]", new WinGeom(1240, 0, 300, 300));
 
-
+  timer.tick();
   Cview.show(&C_prev_time);
   Cordview.show(&C_space);
 
@@ -332,6 +345,7 @@ int main (int argc, char* argv[]) {
 
   //View::wait(HERMES_WAIT_KEYPRESS);
 
+  timer.tick(HERMES_SKIP);
 
   // Newton's loop on the coarse mesh.
   info("Solving on coarse mesh:");
@@ -604,7 +618,11 @@ int main (int argc, char* argv[]) {
         ((double) Space::get_num_dofs(Hermes::vector<Space *>(
         &C_space, &phi_space, &u1_space, &u2_space))));
 
+    timer.tick();
+    graph_time_time.add_values(((double) pid.get_timestep_number()), timer.accumulated());
+
     graph_time_dof.save("time_dof.dat");
+    graph_time_time.save("time_time.dat");
 
     // Copy last reference solution into sln_prev_time.
     C_prev_time.copy(&C_ref_sln);
@@ -612,11 +630,6 @@ int main (int argc, char* argv[]) {
     u1_prev_time.copy(&u1_ref_sln);
     u2_prev_time.copy(&u2_ref_sln);
 
-    info("Von Mises filter");
-    VonMisesFilter stress(Hermes::vector<MeshFunction *>(&u1_prev_time, &u2_prev_time), mech_lambda, mech_mu);
-    deformationview.show_mesh(false);
-    //deformationview.show(&stress, HERMES_EPS_HIGH, H2D_FN_VAL_0, &u1_prev_time, &u2_prev_time, 1.5e5);
-    //deformationview.show(&stress);
 
   } while (pid.has_next());
 
