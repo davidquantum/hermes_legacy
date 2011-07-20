@@ -1,0 +1,23 @@
+# Everything is in meters:
+a = 1
+b = 1
+
+2a = 2
+
+vertices = [
+  [ 0, 0 ],
+  [ 2a, 0 ],
+  [ 2a, b ],
+  [ 0, b ]
+]
+
+elements = [
+  [ 0, 1, 2, 3, "e" ]
+]
+
+boundaries = [
+  [ 0, 1, "Solid_Wall" ],
+  [ 1, 2, "Outflow" ],
+  [ 2, 3, "Solid_Wall" ],
+  [ 3, 0, "Inflow" ]
+]

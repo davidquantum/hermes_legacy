@@ -23,9 +23,9 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
 const double alpha = 1.0;
 
 // Exact solution.
-scalar3 &exact_solution(double x, double y, double z, scalar3 &dx, scalar3 &dy, scalar3 &dz) {
+scalar3 exact_solution(double x, double y, double z, scalar3 &dx, scalar3 &dy, scalar3 &dz) {
   _F_
-  static scalar3 val;
+    static scalar3 val(0.0, 0.0, 0.0);
 
 #ifdef FN4
   dx[0] = (1 - y*y)*(1 - z*z)*(z - 6*x*x);
@@ -131,7 +131,7 @@ void f(S x, S y, S z, T (&val)[3]) {
 // Boundary condition types.
 BCType bc_types(int marker) 
 {
-  return BC_ESSENTIAL;
+  return H3D_BC_ESSENTIAL;
 }
 
 template<typename Real, typename Scalar>

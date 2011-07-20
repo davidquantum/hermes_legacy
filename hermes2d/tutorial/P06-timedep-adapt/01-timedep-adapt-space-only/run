@@ -1,3 +1,0 @@
-rm *~ 
-./newton-timedep-heat-adapt
-

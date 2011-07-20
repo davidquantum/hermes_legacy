@@ -10,15 +10,11 @@
 #define ERROR_FAILURE                               -1
 
 // Problem specification (core geometry, material properties, initial FE space).
-#include "neutronics_problem_def.cpp"
-
 // Common functions for neutronics problems (requires variable declarations from
-// "neutronics_problem_def.cpp").
-#include "neutronics_common.cpp"
-
+// "Problem specification").
 // Weak forms for the problem (requires variable declarations from
-// "neutronics_problem_def.cpp").
-#include "forms.cpp"
+// "Problem specification").
+#include "../definitions.cpp"
 
 // General input (eigenvalue problem).
 
@@ -39,15 +35,25 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
 
 
 int main() 
-{		
+{
   // Time measurement.
   TimePeriod cpu_time;
   cpu_time.tick();
        
   // Create space.
   // Transform input data to the format used by the "Space" constructor.
-  SpaceData *md = new SpaceData(verbose);		
-  Space* space = new Space(md->N_macroel, md->interfaces, md->poly_orders, md->material_markers, md->subdivisions, N_GRP, N_SLN);  
+  SpaceData *md = new SpaceData();
+  
+  // Boundary conditions.
+  Hermes::vector<BCSpec *>DIR_BC_LEFT =  Hermes::vector<BCSpec *>();
+  Hermes::vector<BCSpec *>DIR_BC_RIGHT;
+  
+  for (int g = 0; g < N_GRP; g++)  
+    DIR_BC_RIGHT.push_back(new BCSpec(g,flux_right_surf[g]));
+  
+  Space* space = new Space(md->N_macroel, md->interfaces, md->poly_orders, md->material_markers, md->subdivisions,
+                           DIR_BC_LEFT, DIR_BC_RIGHT, N_GRP, N_SLN);  
+                           
   delete md;
   
   // Enumerate basis functions, info for user.
@@ -200,6 +206,18 @@ int main()
   info("phi_fast/phi_therm at x=40 : %.4f, err = %.2f%%", R, 100*(R-1.5162)/1.5162);
 
   info("Total running time: %g s", cpu_time.accumulated());
+
+  // Cleanup.
+  for(unsigned i = 0; i < DIR_BC_LEFT.size(); i++)
+      delete DIR_BC_LEFT[i];
+  DIR_BC_LEFT.clear();
+
+  for(unsigned i = 0; i < DIR_BC_RIGHT.size(); i++)
+      delete DIR_BC_RIGHT[i];
+  DIR_BC_RIGHT.clear();
+
+  delete dp;
+  delete space;
 
   // Test variable.
   info("ndof = %d.", Space::get_num_dofs(space));

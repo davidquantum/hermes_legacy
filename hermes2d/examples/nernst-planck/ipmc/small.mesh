@@ -1,0 +1,23 @@
+h = 200e-6
+hh = 100e-6
+-hh = -100e-6
+w = 1e-3
+
+vertices = [
+	[ 0, -hh ],	#0
+	[ 0, hh ],	#1
+	[ w, hh ],	#2
+	[ w, -hh ]	#3
+]
+
+elements = [
+	[ 0, 3, 2, 1, "elt" ]	#quad 0
+]
+
+boundaries = [
+	[ 0, 1, "b1" ],	#sides
+	[ 3, 2, "b2" ],	#sides
+	[ 1, 2, "b3" ],	#top
+	[ 0, 3, "b4" ]	#bottom
+]
+

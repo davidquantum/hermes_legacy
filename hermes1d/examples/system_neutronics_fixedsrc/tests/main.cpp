@@ -10,15 +10,11 @@
 #define ERROR_FAILURE                               -1
 
 // Problem specification (core geometry, material properties, initial FE space).
-#include "neutronics_problem_def.cpp"
-
 // Common functions for neutronics problems (requires variable declarations from
-// "neutronics_problem_def.cpp").
-#include "neutronics_common.cpp"
-
+// "Problem specification").
 // Weak forms for the problem (requires variable declarations from
-// "neutronics_problem_def.cpp").
-#include "forms.cpp"
+// "Problem specification").
+#include "../definitions.cpp"
 
 // General input (external source problem).
 
@@ -43,7 +39,17 @@ int main()
   // Create space.
   // Transform input data to the format used by the "Space" constructor.
   SpaceData *md = new SpaceData();
-  Space* space = new Space(md->N_macroel, md->interfaces, md->poly_orders, md->material_markers, md->subdivisions, N_GRP, N_SLN);  
+  
+  // Boundary conditions.
+  Hermes::vector<BCSpec *>DIR_BC_LEFT =  Hermes::vector<BCSpec *>();
+  Hermes::vector<BCSpec *>DIR_BC_RIGHT;
+  
+  for (int g = 0; g < N_GRP; g++)  
+    DIR_BC_RIGHT.push_back(new BCSpec(g,flux_right_surf[g]));
+  
+  Space* space = new Space(md->N_macroel, md->interfaces, md->poly_orders, md->material_markers, md->subdivisions,
+                           DIR_BC_LEFT, DIR_BC_RIGHT, N_GRP, N_SLN);  
+                           
   delete md;
   
   // Enumerate basis functions, info for user.
@@ -53,11 +59,6 @@ int main()
   // Plot the space.
   space->plot("space.gp");
 
-  for (int g = 0; g < N_GRP; g++)  
-  {
-    space->set_bc_right_dirichlet(g, flux_right_surf[g]);
-  }
-  
   // Initialize the weak formulation.
   WeakForm wf(2);
   wf.add_matrix_form(0, 0, jacobian_fuel_0_0, NULL, fuel);
@@ -136,6 +137,24 @@ int main()
 
   // Test variable.
   info("ndof = %d.", Space::get_num_dofs(space));
+
+  // Cleanup.
+  for(unsigned i = 0; i < DIR_BC_LEFT.size(); i++)
+      delete DIR_BC_LEFT[i];
+  DIR_BC_LEFT.clear();
+
+  for(unsigned i = 0; i < DIR_BC_RIGHT.size(); i++)
+      delete DIR_BC_RIGHT[i];
+  DIR_BC_RIGHT.clear();
+
+  delete matrix;
+  delete rhs;
+  delete solver;
+  delete[] coeff_vec;
+  delete dp;
+  delete space;
+
+
   if (success)
   {
     info("Success!");

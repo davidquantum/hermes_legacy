@@ -10,15 +10,11 @@
 #define ERROR_FAILURE                               -1
 
 // Problem specification (core geometry, material properties, initial FE space).
-#include "neutronics_problem_def.cpp"
-
 // Common functions for neutronics problems (requires variable declarations from
-// "neutronics_problem_def.cpp").
-#include "neutronics_common.cpp"
-
-// Weak forms for the problem (requires the rhs construction routine from 
-// "neutronics_common.cpp").
-#include "forms.cpp"
+// "Problem specification").
+// Weak forms for the problem (requires variable declarations from
+// "Problem specification").
+#include "../definitions.cpp"
 
 // General input (external source problem).
 bool flag = false;											// Flag for debugging purposes.
@@ -41,8 +37,21 @@ int main()
 
   // Create space.
   // Transform input data to the format used by the "Space" constructor.
-  SpaceData *md = new SpaceData();		
-  Space* space = new Space(md->N_macroel, md->interfaces, md->poly_orders, md->material_markers, md->subdivisions, N_GRP, N_SLN);  
+  SpaceData *md = new SpaceData();
+  
+  // Boundary conditions.
+  Hermes::vector<BCSpec *>DIR_BC_LEFT;
+  Hermes::vector<BCSpec *>DIR_BC_RIGHT;
+  
+  for (int g = 0; g < N_GRP; g++) 
+  {
+    DIR_BC_LEFT.push_back(new BCSpec(g,flux_left_surf[g]));
+    DIR_BC_RIGHT.push_back(new BCSpec(g,flux_right_surf[g]));
+  }
+  
+  Space* space = new Space(md->N_macroel, md->interfaces, md->poly_orders, md->material_markers, md->subdivisions,
+                           DIR_BC_LEFT, DIR_BC_RIGHT, N_GRP, N_SLN);  
+                           
   delete md;
   
   // Enumerate basis functions, info for user.
@@ -143,6 +152,23 @@ int main()
 
   // Test variable.
   info("ndof = %d.", Space::get_num_dofs(space));
+
+  // Cleanup.
+  for(unsigned i = 0; i < DIR_BC_LEFT.size(); i++)
+      delete DIR_BC_LEFT[i];
+  DIR_BC_LEFT.clear();
+
+  for(unsigned i = 0; i < DIR_BC_RIGHT.size(); i++)
+      delete DIR_BC_RIGHT[i];
+  DIR_BC_RIGHT.clear();
+
+  delete matrix;
+  delete rhs;
+  delete solver;
+  delete[] coeff_vec;
+  delete dp;
+  delete space;
+
   if (success)
   {
     info("Success!");

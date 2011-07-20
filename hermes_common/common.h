@@ -57,7 +57,7 @@
 #include "compat.h"               // platform compatibility stuff
 #include "callstack.h"            // error tracing
 #include "error.h"
-//.
+//
 #include "vector.h"
 #include "tables.h"
 
@@ -88,7 +88,7 @@ enum MatrixSolverType
 
 // Should be in the same order as MatrixSolverTypes above, so that the
 // names may be accessed by the same enumeration variable.
-const std::string MatrixSolverNames[7] = {
+const std::string MatrixSolverNames[6] = {
   "UMFPACK",
   "PETSc",
   "MUMPS",
@@ -134,8 +134,18 @@ enum ProjNormType
   HERMES_H1_NORM, 
   HERMES_H1_SEMINORM, 
   HERMES_HCURL_NORM, 
-  HERMES_HDIV_NORM
+  HERMES_HDIV_NORM,
+  // Used for passing to projecting functions.
+  HERMES_UNSET_NORM
 };
+
+// Splines.
+// (In weak forms, NULL spline is translated into a constant spline with value 1.0.)
+#define HERMES_DEFAULT_SPLINE      NULL
+
+// Functions.
+// (In weak forms, NULL function is translated into a constant function with value 1.0.)
+#define HERMES_ONE    NULL
 
 #ifdef HERMES_COMMON_COMPLEX
 
@@ -228,6 +238,11 @@ struct HERMES_API Point2D {
 struct HERMES_API Point3D {
 	double x, y, z;		// coordinates of a point
 };
+
+struct HERMES_API SplineCoeff {
+  double a, b, c, d;		// four coefficients of a cubic spline.
+};
+
 
 inline double dot_product(const Point3D &a, const Point3D &b) { return a.x * b.x + a.y * b.y + a.z * b.z;}
 
@@ -352,8 +367,39 @@ typedef double double2x2[2][2];
 typedef double double3x2[3][2];
 typedef double double3x3[3][3];
 
-typedef scalar scalar2[2];
-typedef scalar scalar3[3];
+struct scalar2 
+{ 
+  scalar val[2]; 
+
+ public:
+  scalar2(scalar v1, scalar v2) 
+  { 
+    val[0] = v1; val[1] = v2; 
+  }
+
+  scalar& operator[] (int idx) 
+  { 
+    assert(idx >= 0 && idx < 2);
+    return val[idx];
+  }
+};
+
+struct scalar3
+{ 
+  scalar val[3]; 
+
+ public:
+  scalar3(scalar v1, scalar v2, scalar v3) 
+  { 
+    val[0] = v1; val[1] = v2, val[2] = v3; 
+  }
+
+  scalar& operator[] (int idx) 
+  { 
+    assert(idx >= 0 && idx < 3);
+    return val[idx];
+  }
+};
 
 typedef unsigned long long int uint64;
 
@@ -367,19 +413,26 @@ typedef unsigned long long int uint64;
 #define M_PI           3.14159265358979323846
 #endif
 
-const int HERMES_ANY = -1234;
+const std::string HERMES_ANY = "-1234";
+// For internal use.
+const int HERMES_ANY_INT = -1234;
 /// This defines the edge types used by discontinuous Galerkin weak forms.
-enum DG_EdgeType
-{
-	H2D_DG_BOUNDARY_EDGE = -12345,  ///< This is to be used by weak forms on the boundary. 
+const std::string H2D_DG_BOUNDARY_EDGE = "-12345";  ///< This is to be used by weak forms on the boundary. 
                                     ///< It complements H2D_ANY in that it ensures the forms are evaluated also on non-natural
                                     ///< boundaries (essential conditions may be enforced weakly in some DG methods).
-	H2D_DG_INNER_EDGE = -1234567    ///< This is to be used by weak forms specifying numerical flux through interior edges.
+const std::string H2D_DG_INNER_EDGE = "-1234567";    ///< This is to be used by weak forms specifying numerical flux through interior edges.
                                     ///< Forms with this identifier will receive DiscontinuousFunc representations of shape
                                     ///< and ext. functions, which they may query for values on either side of given interface.
-};
-  
+
+// For internal use.
+const int H2D_DG_INNER_EDGE_INT = -1234567;
+const int H2D_DG_BOUNDARY_EDGE_INT = -12345;
+
 const int HERMES_DIRICHLET_DOF = -1; // Dirichlet lift is a special DOF with number -1.
+
+// For internal use (within Geom<Ord>).
+const int HERMES_DUMMY_ELEM_MARKER = -9999;
+const int HERMES_DUMMY_EDGE_MARKER = -8888;
 
 /// This class makes command line arguments available to any other method in Hermes.
 class HERMES_API CommandLineArgs

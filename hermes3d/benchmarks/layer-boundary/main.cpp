@@ -2,7 +2,6 @@
 #define HERMES_REPORT_INFO
 #define HERMES_REPORT_VERBOSE
 #include "config.h"
-//#include <getopt.h>
 #include <hermes3d.h>
 
 // With large K, this is a singularly perturbed problem that exhibits an extremely
@@ -47,13 +46,10 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
 // Problem parameters.
 const double K = 1e2;
 
-// Exact solution.
-#include "exact_solution.cpp"
-
 // Boundary condition types.
 BCType bc_types(int marker)
 {
-  return BC_ESSENTIAL;
+  return H3D_BC_ESSENTIAL;
 }
 
 // Essential (Dirichlet) boundary condition values. 
@@ -62,8 +58,8 @@ scalar essential_bc_values(int ess_bdy_marker, double x, double y, double z)
   return 0;
 }
 
-// Weak forms. 
-#include "forms.cpp"
+// Exact solution and Weak forms. 
+#include "definitions.cpp"
 
 int main(int argc, char **args) 
 {
@@ -81,8 +77,8 @@ int main(int argc, char **args)
 
   // Initialize weak formulation.
   WeakForm wf;
-  wf.add_matrix_form(callback(bilinear_form), HERMES_SYM, HERMES_ANY);
-  wf.add_vector_form(linear_form, linear_form_ord, HERMES_ANY);
+  wf.add_matrix_form(callback(bilinear_form), HERMES_SYM, HERMES_ANY_INT);
+  wf.add_vector_form(linear_form, linear_form_ord, HERMES_ANY_INT);
 
   // Set exact solution.
   ExactSolution exact(&mesh, sol_exact);
@@ -102,7 +98,7 @@ int main(int argc, char **args)
     info("---- Adaptivity step %d:", as);
 
     // Construct globally refined reference mesh and setup reference space.
-    Space* ref_space = construct_refined_space(&space, 1);
+    Space* ref_space = Space::construct_refined_space(&space, 1);
     
     // Initialize discrete problem.
     bool is_linear = true;
@@ -140,7 +136,7 @@ int main(int argc, char **args)
     // Project the reference solution on the coarse mesh.
     Solution sln(space.get_mesh());
     info("Projecting reference solution on coarse mesh.");
-    OGProjection::project_global(&space, &ref_sln, &sln, matrix_solver);
+    OGProjection::project_global(&space, &ref_sln, &sln, matrix_solver, HERMES_H1_NORM);
 
     // Time measurement.
     cpu_time.tick();

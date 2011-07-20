@@ -1,3 +1,5 @@
-add_subdirectory(navier-stokes-bearing)
-add_subdirectory(navier-stokes-timedep-adapt)
-add_subdirectory(navier-stokes-two-phase)
+add_subdirectory(bearing)
+add_subdirectory(driven-cavity)
+#add_subdirectory(rayleigh-benard)
+add_subdirectory(circular-obstacle)
+add_subdirectory(circular-obstacle-adapt) 

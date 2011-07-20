@@ -42,10 +42,7 @@ if (NOT DEBUG AND NOT RELEASE)
                        Re-run with DEBUG and/or RELEASE set to YES.")
 endif (NOT DEBUG AND NOT RELEASE)
 
-# For use in the common code.
-set(H1D_REAL YES)
-
-# Depending on the setting of H1D_DEBUG and H1D_REAL, the user will have 
+# Depending on the setting of H1D_DEBUG and H1D_RELEASE, the user will have 
 # two variables at his disposal: HERMES1D_RELEASE and/or HERMES1D_DEBUG
 # (corresponding to the two libraries built on his system). He can use these
 # to selectively link his project to either the optimized version or
@@ -56,12 +53,17 @@ set(H1D_REAL YES)
 # the Release version will be selected. The appropriate version of hermes_common
 # will be linked as well.
 if(MSVC)
-  set(HERMES1D hermes1d)                # Base name of the library.
-  set(HERMES1D_RELEASE ${HERMES1D})     # Name of the release version.
-  set(HERMES1D_DEBUG ${HERMES1D}-debug) # Name of the debug version.
+    set(HERMES1D_RELEASE "hermes1d")
+    set(HERMES1D_DEBUG "hermes1d-debug")
+    if(RELEASE)
+		set(HERMES1D ${HERMES1D_RELEASE})
+	endif(RELEASE)
+	if(DEBUG)
+		set(HERMES1D ${HERMES1D_DEBUG})
+	endif(DEBUG)
 else(MSVC)
   if(RELEASE)
-    set(HERMES1D_RELEASE hermes1D)
+    set(HERMES1D_RELEASE "hermes1d")
     set(HERMES1D ${HERMES1D_RELEASE})
   
     # set(CMAKE_BUILD_TYPE Release) # This does not work with multi-version configurations,
@@ -69,7 +71,7 @@ else(MSVC)
                                     # to have separate projects for Debug and Release)
   endif(RELEASE)
   if(DEBUG)
-    set(HERMES1D_DEBUG hermes1D-debug)
+    set(HERMES1D_DEBUG "hermes1d-debug")
     set(HERMES1D ${HERMES1D_DEBUG})
     #set(CMAKE_BUILD_TYPE Debug)
   endif(DEBUG)
@@ -80,8 +82,9 @@ endif(MSVC)
 #
 
 if(WITH_PYTHON)
-  # This is needed to make hermes_common working properly:
-  set(CYTHON_INCLUDE_DIRECTORIES . -I${CMAKE_CURRENT_SOURCE_DIR}/hermes1d/hermes_common)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/hermes1d/h1d_wrapper/)
+  set(CYTHON_INCLUDE_DIRECTORIES -I.)
+  set(CYTHON_INCLUDE_DIRECTORIES ${CYTHON_INCLUDE_DIRECTORIES} -I${CMAKE_SOURCE_DIR}/hermes_common)
   add_subdirectory(hermes1d)
 endif(WITH_PYTHON)
 

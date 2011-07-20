@@ -58,15 +58,15 @@ const double J[3] = {1e+7 *  1 / sqrt((double)2), 0, 1e+7 *   1/ sqrt((double)2)
 
 
 // Weak forms.
-#include "forms.cpp"
+#include "definitions.cpp"
 
 // Boundary condition types. 
 BCType bc_types(int marker)
 {
   if (marker == 1 || marker == 6)
-    return BC_ESSENTIAL; // perfect conductor
+    return H3D_BC_ESSENTIAL; // perfect conductor
   else
-    return BC_NATURAL; // impedance
+    return H3D_BC_NATURAL; // impedance
 }
 
 // Essential (Dirichlet) boundary condition values. 
@@ -108,7 +108,7 @@ int main(int argc, char **args)
     info("---- Adaptivity step %d:", as);
 
     // Construct globally refined reference mesh and setup reference space.
-    Space* ref_space = construct_refined_space(&space, 1);
+    Space* ref_space = Space::construct_refined_space(&space, 1);
 
     // Initialize discrete problem.
     bool is_linear = true;

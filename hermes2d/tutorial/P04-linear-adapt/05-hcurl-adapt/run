@@ -1,4 +1,0 @@
-rm *~  
-./hcurl-adapt
-python plot_graph.py &
-

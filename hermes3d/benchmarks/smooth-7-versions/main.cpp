@@ -49,36 +49,38 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
 #define ANISO_Y	   2
 #define ANISO_Z	   4
 int ANISO_TYPE;
-#include "exact_solution.cpp"
+
+// Exact solution and Weak forms.
+#include "definitions.cpp"
 
 // Boundary condition types. We also assign directional polynomial degrees here. 
 BCType bc_types(int marker)
 {
   switch (ANISO_TYPE) {
     // u = sin(x), thus we prescribe zero Dirichlet at faces 1 and 2, and zero Neumann elsewhere.
-    case ANISO_X: if (marker == 1 || marker == 2) return BC_ESSENTIAL; 
-                  else return BC_NATURAL;
+    case ANISO_X: if (marker == 1 || marker == 2) return H3D_BC_ESSENTIAL; 
+                  else return H3D_BC_NATURAL;
     // u = sin(y), thus we prescribe zero Dirichlet at faces 3 and 4, and zero Neumann elsewhere.
-    case ANISO_Y: if (marker == 3 || marker == 4) return BC_ESSENTIAL; 
-                  else return BC_NATURAL;
+    case ANISO_Y: if (marker == 3 || marker == 4) return H3D_BC_ESSENTIAL; 
+                  else return H3D_BC_NATURAL;
     // u = sin(z), thus we prescribe zero Dirichlet at faces 5 and 6, and zero Neumann elsewhere.
-    case ANISO_Z: if (marker == 5 || marker == 6) return BC_ESSENTIAL; 
-                  else return BC_NATURAL;
+    case ANISO_Z: if (marker == 5 || marker == 6) return H3D_BC_ESSENTIAL; 
+                  else return H3D_BC_NATURAL;
     // u = sin(x)*sin(y), thus we prescribe zero Dirichlet at faces 1, 2, 3, 4 and zero Neumann elsewhere.
-    case ANISO_X | ANISO_Y: if (marker == 1 || marker == 2 || marker == 3 || marker == 4) return BC_ESSENTIAL; 
-                            else return BC_NATURAL;
+    case ANISO_X | ANISO_Y: if (marker == 1 || marker == 2 || marker == 3 || marker == 4) return H3D_BC_ESSENTIAL; 
+                            else return H3D_BC_NATURAL;
     // u = sin(x)*sin(z), thus we prescribe zero Dirichlet at faces 1, 2, 5, 6 and zero Neumann elsewhere.
-    case ANISO_X | ANISO_Z: if (marker == 1 || marker == 2 || marker == 5 || marker == 6) return BC_ESSENTIAL; 
-                            else return BC_NATURAL;
+    case ANISO_X | ANISO_Z: if (marker == 1 || marker == 2 || marker == 5 || marker == 6) return H3D_BC_ESSENTIAL; 
+                            else return H3D_BC_NATURAL;
     // u = sin(y)*sin(z), thus we prescribe zero Dirichlet at faces 3, 4, 5, 6 and zero Neumann elsewhere.
-    case ANISO_Y | ANISO_Z: if (marker == 3 || marker == 4 || marker == 5 || marker == 6) return BC_ESSENTIAL; 
-                            else return BC_NATURAL;
+    case ANISO_Y | ANISO_Z: if (marker == 3 || marker == 4 || marker == 5 || marker == 6) return H3D_BC_ESSENTIAL; 
+                            else return H3D_BC_NATURAL;
     // u = sin(x)*sin(y)*sin(z), thus we prescribe zero Dirichlet everywhere.
-    case ANISO_X | ANISO_Y | ANISO_Z: return BC_ESSENTIAL;
+    case ANISO_X | ANISO_Y | ANISO_Z: return H3D_BC_ESSENTIAL;
     default: error("Admissible command-line options are x, y, x, xy, xz, yz, xyz.");
   }
 
-  return BC_ESSENTIAL;
+  return H3D_BC_ESSENTIAL;
 }
 
 // Assign the lowest possible directional polynomial degrees so that the problem's NDOF >= 1.
@@ -119,9 +121,6 @@ int parse_aniso_type(char *str)
   return type;
 }
 
-// Weak forms.
-#include "forms.cpp"
-
 int main(int argc, char **args)
 {
   // Check the number of command-line parameters.
@@ -147,8 +146,8 @@ int main(int argc, char **args)
 
   // Initialize weak formulation.
   WeakForm wf;
-  wf.add_matrix_form(bilinear_form<double, scalar>, bilinear_form<Ord, Ord>, HERMES_SYM, HERMES_ANY);
-  wf.add_vector_form(linear_form<double, scalar>, linear_form<Ord, Ord>, HERMES_ANY);
+  wf.add_matrix_form(bilinear_form<double, scalar>, bilinear_form<Ord, Ord>, HERMES_SYM, HERMES_ANY_INT);
+  wf.add_vector_form(linear_form<double, scalar>, linear_form<Ord, Ord>, HERMES_ANY_INT);
 
   // Set exact solution.
   ExactSolution exact(&mesh, fndd);
@@ -168,7 +167,7 @@ int main(int argc, char **args)
     info("---- Adaptivity step %d:", as);
 
     // Construct globally refined reference mesh and setup reference space.
-    Space* ref_space = construct_refined_space(&space, 1);
+    Space* ref_space = Space::construct_refined_space(&space, 1);
 
     // Initialize discrete problem.
     bool is_linear = true;
@@ -206,7 +205,7 @@ int main(int argc, char **args)
     // Project the reference solution on the coarse mesh.
     Solution sln(space.get_mesh());
     info("Projecting reference solution on coarse mesh.");
-    OGProjection::project_global(&space, &ref_sln, &sln, matrix_solver);
+    OGProjection::project_global(&space, &ref_sln, &sln, matrix_solver, HERMES_H1_NORM);
 
     // Time measurement.
     cpu_time.tick();

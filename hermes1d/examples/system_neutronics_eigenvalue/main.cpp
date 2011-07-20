@@ -21,19 +21,15 @@
 //  BC:  .
 //
 // Problem specification (core geometry, material properties, initial FE space).
-#include "neutronics_problem_def.cpp"
-
 // Common functions for neutronics problems (requires variable declarations from
-// "neutronics_problem_def.cpp").
-#include "neutronics_common.cpp"
-
+// "Problem specification").
 // Weak forms for the problem (requires variable declarations from
-// "neutronics_problem_def.cpp").
-#include "forms.cpp"
+// "Problem specification").
+#include "definitions.cpp"
 
 // General input (eigenvalue problem).
 
-bool flag = false;					// Flag for debugging purposes.
+bool flag = false;    // Flag for debugging purposes.
 bool verbose = true;
 
 // Power method initialization.
@@ -54,7 +50,17 @@ int main()
   // Create space.
   // Transform input data to the format used by the "Space" constructor.
   SpaceData *md = new SpaceData(verbose);		
-  Space* space = new Space(md->N_macroel, md->interfaces, md->poly_orders, md->material_markers, md->subdivisions, N_GRP, N_SLN);  
+  
+  // Boundary conditions.
+  Hermes::vector<BCSpec *>DIR_BC_LEFT =  Hermes::vector<BCSpec *>();
+  Hermes::vector<BCSpec *>DIR_BC_RIGHT;
+  
+  for (int g = 0; g < N_GRP; g++)  
+    DIR_BC_RIGHT.push_back(new BCSpec(g,flux_right_surf[g]));
+  
+  Space* space = new Space(md->N_macroel, md->interfaces, md->poly_orders, md->material_markers, md->subdivisions,
+                           DIR_BC_LEFT, DIR_BC_RIGHT, N_GRP, N_SLN);  
+                           
   delete md;
   
   // Enumerate basis functions, info for user.
@@ -70,10 +76,7 @@ int main()
   double init_val = 1.0;
 
   for (int g = 0; g < N_GRP; g++)  
-  {
     set_vertex_dofs_constant(space, init_val, g);
-    space->set_bc_right_dirichlet(g, flux_right_surf[g]);
-  }
   
   // Initialize the weak formulation.
   WeakForm wf(2);
@@ -209,6 +212,18 @@ int main()
   R = flux[0]/flux[1];
   info("phi_fast/phi_therm at x=40 : %.4f, err = %.2f%%", R, 100*(R-1.5162)/1.5162);
 	
+  // Cleanup.
+  for(unsigned i = 0; i < DIR_BC_LEFT.size(); i++)
+      delete DIR_BC_LEFT[i];
+  DIR_BC_LEFT.clear();
+
+  for(unsigned i = 0; i < DIR_BC_RIGHT.size(); i++)
+      delete DIR_BC_RIGHT[i];
+  DIR_BC_RIGHT.clear();
+
+  delete dp;
+  delete space;
+
   info("Done.");
   return 0;
 }

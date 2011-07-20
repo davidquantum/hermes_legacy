@@ -25,11 +25,11 @@
 
 #define callback(a)	a<double, scalar>, a<Ord, Ord>
 
-/// Base type for orders of functions.
+/// Base type for integration orders of functions.
 ///
 /// We defined a special arithmetics with this type to be able to analyze forms
-/// and determine the necessary integration order.  This works for forms, but it also
-/// works for user-defined functions.
+/// and determine the necessary integration order. This works for forms and
+/// for user-defined functions.
 class Ord
 {
 public:
@@ -39,7 +39,8 @@ public:
   Ord(double d): order(0) {}
 
   int get_order() const { return order; }
-  int get_max_order() const {return 30;}
+  
+  static int get_max_order() {return 30;}
 
   Ord operator+(const Ord &o) { return Ord(std::max(this->order, o.order)); }
   Ord operator+(double d) { return *this; }
@@ -154,6 +155,33 @@ public:
     }
   };
 #undef H2D_SUBTRACT_IF_NOT_NULL
+
+  /// Add arrays stored in a given attribute from the same array in provided function.
+#define H2D_ADD_IF_NOT_NULL(__ATTRIB, __OTHER_FUNC) { if (__ATTRIB != NULL) { \
+  assert_msg(__OTHER_FUNC.__ATTRIB != NULL, "Unable to add a function expansion " #__ATTRIB " is NULL in the other function."); \
+  for(int i = 0; i < num_gip; i++) __ATTRIB[i] += __OTHER_FUNC.__ATTRIB[i]; } }
+
+  /// Calculate this += func for each function expations and each integration point.
+  /** \param[in] func A function which is added from *this. A number of integratioN points and a number of component has to match. */
+  //FIXME : It should be 'virtual', but then it doesn't compile.
+  void add(const Func<T>& func) {
+    assert_msg(num_gip == func.num_gip, "Unable to add a function due to a different number of integration points (this: %d, other: %d)", num_gip, func.num_gip);
+    assert_msg(nc == func.nc, "Unable to add a function due to a different number of components (this: %d, other: %d)", nc, func.nc);
+    H2D_ADD_IF_NOT_NULL(val, func)
+    H2D_ADD_IF_NOT_NULL(dx, func)
+    H2D_ADD_IF_NOT_NULL(dy, func)
+    if (nc > 1) {
+      H2D_ADD_IF_NOT_NULL(val0, func)
+      H2D_ADD_IF_NOT_NULL(val1, func)
+      H2D_ADD_IF_NOT_NULL(dx0, func)
+      H2D_ADD_IF_NOT_NULL(dx1, func)
+      H2D_ADD_IF_NOT_NULL(dy0, func)
+      H2D_ADD_IF_NOT_NULL(dy1, func)
+      H2D_ADD_IF_NOT_NULL(curl, func)
+      H2D_ADD_IF_NOT_NULL(div, func)
+    }
+  };
+#undef H2D_ADD_IF_NOT_NULL
 
   virtual void free_ord() {
     delete val;
@@ -419,8 +447,8 @@ template<typename T>
 class HERMES_API ExtData
 {
 public:
-  int nf;         ///< Number of functions in 'fn' array.
-  Func<T>** fn;   ///< Array of pointers to functions.
+  int nf;           ///< Number of functions in 'fn' array.
+  Func<T>** fn;     ///< Array of pointers to functions.
 
   ExtData()
   {
@@ -442,6 +470,104 @@ public:
   {
     delete [] fn;
   }
+};
+
+// Generic class for functions of one and two variables.
+class HermesFunction
+{
+public:
+  HermesFunction()
+  {
+    this->is_const = true;
+    this->const_value = -9999.0;
+  };
+
+  HermesFunction(scalar value)
+  {
+    this->is_const = true;
+    this->const_value = value;
+  };
+
+  virtual scalar value(double x) const
+  {
+    return const_value;
+  };
+
+  virtual Ord value(Ord x) const
+  {
+    return Ord(1);
+  };
+
+  virtual scalar value(double x, double y) const
+  {
+    return const_value;
+  };
+
+// This is a hack for Hermes to build in complex mode.
+#ifdef H2D_COMPLEX
+  virtual scalar value(scalar x) const
+  {
+    return const_value;
+  };
+#endif
+
+  virtual Ord value(Ord x, Ord y) const
+  {
+    return Ord(1);
+  };
+
+// This is a hack for Hermes to build in complex mode.
+#ifdef H2D_COMPLEX
+  virtual scalar value(scalar x, scalar y) const
+  {
+    return const_value;
+  };
+#endif
+
+  virtual scalar derivative(double x) const
+  {
+    return 0.0;
+  };
+
+// This is a hack for Hermes to build in complex mode.
+#ifdef H2D_COMPLEX
+  virtual scalar derivative(scalar x) const
+  {
+    return cplx(0.0, 0.0);
+  };
+#endif
+
+  virtual Ord derivative(Ord x) const
+  {
+    return Ord(1);
+  };
+
+  virtual scalar derivative(double x, double y) const
+  {
+    return 0.0;
+  };
+
+// This is a hack for Hermes to build in complex mode.
+#ifdef H2D_COMPLEX
+  virtual scalar derivative(scalar x, scalar y) const
+  {
+    return cplx(0.0, 0.0);
+  };
+#endif
+
+  virtual Ord derivative(Ord x, Ord y) const
+  {
+    return Ord(1);
+  };
+
+  bool is_constant() const
+  {
+    return is_const;
+  }
+
+protected:
+  bool is_const;
+  scalar const_value;
 };
 
 #endif

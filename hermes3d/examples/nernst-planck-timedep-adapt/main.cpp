@@ -3,9 +3,6 @@
 #define HERMES_REPORT_VERBOSE
 #define HERMES_REPORT_FILE "application.log"
 
-#include "timestep_controller.h"
-//#include "timestep_controller.h"
-
 //using namespace RefinementSelectors;
 
 
@@ -73,8 +70,8 @@ const double ERR_STOP = 0.1;                      // Stopping criterion for adap
 MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESOS, SOLVER_AZTECOO, SOLVER_MUMPS,
                                                   // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 */
-// Weak forms
-#include "forms.cpp"
+// Weak forms and timestep controller
+#include "definitions.cpp"
 
 
 /*** Boundary types and conditions ***/
@@ -95,12 +92,12 @@ scalar ic_C(double x, double y, double z, double &dx, double &dy, double &dz) {
 
 // Boundary condition types. 
 BCType bc_types_phi(int marker) {
-  if (marker == BDY_TOP || marker == BDY_BOT) return BC_ESSENTIAL;
-  else return BC_NATURAL;
+  if (marker == BDY_TOP || marker == BDY_BOT) return H3D_BC_ESSENTIAL;
+  else return H3D_BC_NATURAL;
 }
 
 BCType bc_types_C(int marker) {
-  return BC_NATURAL;
+  return H3D_BC_NATURAL;
 }
 
 // Essential (Dirichlet) boundary condition values. 
@@ -146,7 +143,7 @@ int main (int argc, char* argv[]) {
   wf.add_matrix_form(0, 1, callback(J_euler_DFcDYphi), HERMES_NONSYM);
   wf.add_matrix_form(1, 0, callback(J_euler_DFphiDYc), HERMES_NONSYM);
   wf.add_matrix_form(1, 1, callback(J_euler_DFphiDYphi), HERMES_NONSYM);
-  wf.add_vector_form(0, callback(Fc_euler), HERMES_ANY,
+  wf.add_vector_form(0, callback(Fc_euler), HERMES_ANY_INT,
                      Hermes::vector<MeshFunction*>(&C_prev_time, &phi_prev_time));
   wf.add_vector_form(1, callback(Fphi_euler), HERMES_ANY,
                      Hermes::vector<MeshFunction*>(&C_prev_time, &phi_prev_time));

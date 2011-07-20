@@ -1,26 +1,12 @@
 #define HERMES_REPORT_WARN
 #define HERMES_REPORT_INFO
 #define HERMES_REPORT_VERBOSE
-#include "config.h"
+#include "../config.h"
 #include <hermes3d.h>
 
-//  This example comes with an exact solution, and it describes the diffraction
-//  of an electromagnetic wave from a re-entrant corner. Convergence graphs are 
-//  saved, both exact error and error estimate, and both in terms of DOF and CPU time.
-//
-//  PDE: time-harmonic Maxwell's equations.
-//
-//  Known exact solution, see functions exact_sol_val(), exact_sol(), exact().
-//
-//  Domain: L-shape 3D domain.
-//
-//  Meshes: "lshape_hex.mesh3d" (hexahedron mesh) See the mesh.load(...) command below.
-//
-//  BC: perfect conductor on boundary markers 1 and 6 (essential BC),
-//      impedance boundary condition on rest of boundary (natural BC).
-//
-//  The following parameters can be changed:
+// This test makes sure that the benchmark example bessel works correctly.
 
+//  The following parameters can be changed:
 const int INIT_REF_NUM = 2;                       // Number of initial uniform mesh refinements.
 const int P_INIT_X = 2,
           P_INIT_Y = 2,
@@ -45,15 +31,15 @@ const double kappa  = 1.0;
 const double lambda = 1.0;
 
 // Bessel functions, exact solution, and weak forms.
-#include "forms.cpp"
+#include "../definitions.cpp"
 
 // Boundary condition types. 
 BCType bc_types(int marker)
 {
   if (marker == 1 || marker == 6)
-    return BC_ESSENTIAL; // perfect conductor
+    return H3D_BC_ESSENTIAL; // perfect conductor
   else
-    return BC_NATURAL; // impedance
+    return H3D_BC_NATURAL; // impedance
 }
 
 // Essential (Dirichlet) boundary condition values. 
@@ -70,7 +56,7 @@ int main(int argc, char **args)
   // Load the mesh. 
   Mesh mesh;
   H3DReader mloader;
-  mloader.load("lshape_hex.mesh3d", &mesh);
+  mloader.load("../lshape_hex.mesh3d", &mesh);
 
   // Perform initial mesh refinement.
   for (int i=0; i < INIT_REF_NUM; i++) mesh.refine_all_elements(H3D_H3D_H3D_REFT_HEX_XYZ);
@@ -120,8 +106,8 @@ int main(int argc, char **args)
   double err_exact = adaptivity->calc_err_exact(&sln, &ex_sln, solutions_for_adapt, HERMES_TOTAL_ERROR_REL);
 
   if (err_exact > EPS)
-		// Calculated solution is not precise enough.
-		success_test = 0;
+    // Calculated solution is not precise enough.
+    success_test = 0;
 
   // Clean up.
   delete matrix;

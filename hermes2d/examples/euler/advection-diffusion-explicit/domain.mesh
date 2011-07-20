@@ -1,0 +1,47 @@
+a = 1.0
+ma = -1.0
+
+#b = sqrt(2)/2
+b = 0.70710678118654757
+
+c = 0.1
+mc = -0.1
+
+ac = 1.1 # (a + c)
+mac = -1.1 # (a - c)
+
+vertices = [
+  [ 0,  ma],    # vertex 0
+  [ a, ma ],    # vertex 1
+  [ mac, c ],    # vertex 2
+  [ 0, 0 ],     # vertex 3
+  [ a, 0 ],     # vertex 4
+  [ mac, ac ],    # vertex 5
+  [ mc, ac ],     # vertex 6
+  [ mc, c ]  # vertex 7
+]
+
+elements = [
+  [ 0, 1, 4, 3, "e"],   # quad 0
+  [ 3, 4, 6, 7, "e"],   # quad 1
+  [ 2, 7, 6, 5, "e"]   # quad 2
+]
+
+boundaries = [
+  [ 0, 1, "Inflow" ],
+  [ 1, 4, "Solid_Wall" ],
+  [ 3, 0, "Solid_Wall" ],
+  [ 4, 6, "Solid_Wall" ],
+  [ 3, 7, "Solid_Wall" ],
+  [ 2, 7, "Solid_Wall" ],
+  [ 6, 5, "Solid_Wall" ],
+  [ 5, 2, "Outflow" ]
+]
+
+curves = [
+  [ 3, 7, 60 ],  # circular arc with central angle of 45 degrees
+  [ 4, 6, 75 ]   # circular arc with central angle of 45 degrees
+]
+
+
+

@@ -2,7 +2,6 @@
 #define HERMES_REPORT_INFO
 #define HERMES_REPORT_VERBOSE
 #include "config.h"
-//#include <getopt.h>
 #include <hermes3d.h>
 
 //  This benchmark solves the Poisson equation and it comes with an exact solution that 
@@ -50,13 +49,13 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
 double SLOPE = 200.0;                             // Slope of the layer.
 
 
-// Exact solution
-#include "exact_solution.cpp"
+// Exact solution and Weak forms.
+#include "definitions.cpp"
 
 // Boundary condition types.
 BCType bc_types(int marker)
 {
-  return BC_ESSENTIAL;
+  return H3D_BC_ESSENTIAL;
 }
 
 // Essential (Dirichlet) boundary condition values.
@@ -64,9 +63,6 @@ scalar essential_bc_values(int ess_bdy_marker, double x, double y, double z)
 {
   return fn(x, y, z);
 }
-
-// Weak forms.
-#include "forms.cpp"
 
 int main(int argc, char **args) 
 {
@@ -83,8 +79,8 @@ int main(int argc, char **args)
 
   // Initialize weak formulation. 
   WeakForm wf;
-  wf.add_matrix_form(biform<double, double>, biform<Ord, Ord>, HERMES_SYM, HERMES_ANY);
-  wf.add_vector_form(liform<double, double>, liform<Ord, Ord>, HERMES_ANY);
+  wf.add_matrix_form(biform<double, double>, biform<Ord, Ord>, HERMES_SYM, HERMES_ANY_INT);
+  wf.add_vector_form(liform<double, double>, liform<Ord, Ord>, HERMES_ANY_INT);
 
   // Set exact solution.
   ExactSolution exact(&mesh, fndd);
@@ -104,7 +100,7 @@ int main(int argc, char **args)
     info("---- Adaptivity step %d:", as);
 
     // Construct globally refined reference mesh and setup reference space.
-    Space* ref_space = construct_refined_space(&space, 1);
+    Space* ref_space = Space::construct_refined_space(&space, 1);
     
     // Initialize discrete problem.
     bool is_linear = true;
@@ -142,7 +138,7 @@ int main(int argc, char **args)
     // Project the fine mesh solution onto the coarse mesh.
     Solution sln(space.get_mesh());
     info("Projecting reference solution on coarse mesh.");
-    OGProjection::project_global(&space, &ref_sln, &sln, matrix_solver);
+    OGProjection::project_global(&space, &ref_sln, &sln, matrix_solver, HERMES_H1_NORM);
 
     // Time measurement.
     cpu_time.tick();

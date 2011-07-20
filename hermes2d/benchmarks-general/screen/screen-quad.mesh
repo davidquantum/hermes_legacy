@@ -1,0 +1,35 @@
+# quadrilateral mesh consisting of 4 quads for the SCREEN problem
+
+vertices = [
+  [ -1, -1 ],
+  [ 0, -1 ],
+  [ 1, -1 ],
+  [ 1, 0 ],
+  [ 1, 1 ],
+  [ 0, 1 ],
+  [ -1, 1 ],
+  [ -1, 0 ],
+  [ 0, 0 ],
+  [ -1, 0 ]
+]
+
+elements = [
+  [ 1, 8, 9, 0, "Mat" ],
+  [ 8, 1, 2, 3, "Mat" ],
+  [ 8, 3, 4, 5, "Mat" ],
+  [ 7, 8, 5, 6, "Mat" ]
+]
+
+boundaries = [
+  [ 8, 9, "Perfect_conductor" ],
+  [ 9, 0, "Perfect_conductor" ],
+  [ 0, 1, "Perfect_conductor" ],
+  [ 1, 2, "Perfect_conductor" ],
+  [ 2, 3, "Perfect_conductor" ],
+  [ 3, 4, "Perfect_conductor" ],
+  [ 4, 5, "Perfect_conductor" ],
+  [ 7, 8, "Perfect_conductor" ],
+  [ 5, 6, "Perfect_conductor" ],
+  [ 6, 7, "Perfect_conductor" ]
+]
+

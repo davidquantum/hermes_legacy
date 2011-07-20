@@ -1,6 +1,6 @@
 #define HERMES_REPORT_ALL
 #define HERMES_REPORT_FILE "application.log"
-#include "hermes2d.h"
+#include "definitions.h"
 
 using namespace RefinementSelectors;
 
@@ -11,7 +11,7 @@ using namespace RefinementSelectors;
 
 const bool ADAPTIVE_QUADRATURE = true;            // Evaluate weak forms using adaptive quadrature.
 const bool HERMES_VISUALIZATION = true;           // Set to "false" to suppress Hermes OpenGL visualization. 
-const bool VTK_OUTPUT = false;                    // Set to "true" to enable VTK output.
+const bool VTK_VISUALIZATION = false;             // Set to "true" to enable VTK output.
 const int P_INIT = 2;                             // Initial polynomial degree of all mesh elements.
 const double THRESHOLD = 0.2;                     // This is a quantitative parameter of the adapt(...) function and
                                                   // it has different meanings for various adaptive strategies (see below).
@@ -42,18 +42,10 @@ const int NDOF_STOP = 60000;                      // Adaptivity process stops wh
 MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESOS, SOLVER_AZTECOO, SOLVER_MUMPS,
                                                   // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 
-// Boundary markers.
-const int OUTER_BDY = 1, STATOR_BDY = 2;
-
 // Problem parameters.
-const int MATERIAL_1 = 1;
-const int MATERIAL_2 = 2;
 const double EPS_1 = 1.0;       // Relative electric permittivity in Omega_1.
 const double EPS_2 = 10.0;      // Relative electric permittivity in Omega_2.
 const double VOLTAGE = 50.0;    // Voltage on the stator.
-
-// Weak forms.
-#include "forms.cpp"
 
 int main(int argc, char* argv[])
 {
@@ -62,36 +54,23 @@ int main(int argc, char* argv[])
   H2DReader mloader;
   mloader.load("motor.mesh", &mesh);
 
-  // Enter boundary markers.
-  BCTypes bc_types;
-  bc_types.add_bc_dirichlet(Hermes::vector<int>(OUTER_BDY, STATOR_BDY));
-
-  // Enter Dirichlet boundary values.
-  BCValues bc_values;
-  bc_values.add_const(STATOR_BDY, VOLTAGE);
-  bc_values.add_const(OUTER_BDY, 0.0);
+  // Initialize boundary conditions
+  DefaultEssentialBCConst bc_essential_out("Bdy_outer", 0.0);
+  DefaultEssentialBCConst bc_essential_stator("Bdy_stator", VOLTAGE);
+  EssentialBCs bcs(Hermes::vector<EssentialBoundaryCondition *>(&bc_essential_out, &bc_essential_stator));
 
   // Create an H1 space with default shapeset.
-  H1Space space(&mesh, &bc_types, &bc_values, P_INIT);
+  H1Space space(&mesh, &bcs, P_INIT);
 
   // Initialize the weak formulation.
   int adapt_order_increase = 1;
   double adapt_rel_error_tol = 1e1;
-  WeakForm wf;
-  if (ADAPTIVE_QUADRATURE) {
+  CustomWeakForm wf("Material_1", EPS_1, "Material_2", EPS_2, ADAPTIVE_QUADRATURE, adapt_order_increase, adapt_rel_error_tol);
+  
+  if (ADAPTIVE_QUADRATURE)
     info("Adaptive quadrature ON.");    
-    wf.add_matrix_form(biform1, HERMES_SYM, MATERIAL_1, 
-                       Hermes::vector<MeshFunction*>(), 
-                       adapt_order_increase, adapt_rel_error_tol);
-    wf.add_matrix_form(biform2, HERMES_SYM, MATERIAL_2, 
-                       Hermes::vector<MeshFunction*>(), 
-                       adapt_order_increase, adapt_rel_error_tol);
-  }
-  else {
+  else
     info("Adaptive quadrature OFF.");    
-    wf.add_matrix_form(callback(biform1), HERMES_SYM, MATERIAL_1);
-    wf.add_matrix_form(callback(biform2), HERMES_SYM, MATERIAL_2);
-  }
 
   // Initialize coarse and reference mesh solution.
   Solution sln, ref_sln;
@@ -120,7 +99,7 @@ int main(int argc, char* argv[])
     info("---- Adaptivity step %d:", as);
 
     // Construct globally refined reference mesh and setup reference space.
-    Space* ref_space = construct_refined_space(&space);
+    Space* ref_space = Space::construct_refined_space(&space);
 
     // Initialize matrix solver.
     SparseMatrix* matrix = create_matrix(matrix_solver);
@@ -129,8 +108,7 @@ int main(int argc, char* argv[])
 
     // Assemble reference problem.
     info("Solving on reference mesh.");
-    bool is_linear = true;
-    DiscreteProblem* dp = new DiscreteProblem(&wf, ref_space, is_linear);
+    DiscreteProblem* dp = new DiscreteProblem(&wf, ref_space);
     dp->assemble(matrix, rhs);
 
     // Time measurement.
@@ -149,7 +127,7 @@ int main(int argc, char* argv[])
     cpu_time.tick();
    
     // VTK output.
-    if (VTK_OUTPUT) {
+    if (VTK_VISUALIZATION) {
       // Output solution in VTK format.
       Linearizer lin;
       char* title = new char[100];

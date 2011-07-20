@@ -1,8 +1,6 @@
-#define HERMES_REPORT_WARN
-#define HERMES_REPORT_INFO
-#define HERMES_REPORT_VERBOSE
+#define HERMES_REPORT_ALL
 #define HERMES_REPORT_FILE "application.log"
-#include "hermes2d.h"
+#include "definitions.h"
 
 using namespace RefinementSelectors;
 
@@ -60,19 +58,6 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
 const double EPSILON = 0.01;                      // Diffusivity.
 const double B1 = 1., B2 = 1.;                    // Advection direction, div(B) = 0.
 
-// Boundary markers.
-const int BDY_LAYER = 2;
-const int BDY_REST = 1;
-
-// Essemtial (Dirichlet) boundary condition values.
-scalar essential_bc_values(double x, double y)
-{
-  return 2 - pow(x, 0.1) - pow(y, 0.1);
-}
-
-// Weak forms.
-#include "forms.cpp"
-
 int main(int argc, char* argv[])
 {
   // Load the mesh.
@@ -83,29 +68,19 @@ int main(int argc, char* argv[])
 
   // Perform initial mesh refinement.
   for (int i=0; i<INIT_REF_NUM; i++) mesh.refine_all_elements();
-  mesh.refine_towards_boundary(BDY_LAYER, INIT_REF_NUM_BDY);
+  mesh.refine_towards_boundary("Layer", INIT_REF_NUM_BDY);
 
-  // Enter boundary markers.
-  BCTypes bc_types;
-  bc_types.add_bc_dirichlet(Hermes::vector<int>(BDY_LAYER, BDY_REST));
+   // Initialize the weak formulation.
+  WeakFormLinearAdvectionDiffusion wf(STABILIZATION_ON, SHOCK_CAPTURING_ON, B1, B2, EPSILON);
+  
+  // Initialize boundary conditions
+  DefaultEssentialBCConst bc_rest("Rest", 1.0);
+  EssentialBCNonConst bc_layer("Layer");
 
-  // Enter Dirichlet boundary values.
-  BCValues bc_values;
-  bc_values.add_function(BDY_LAYER, essential_bc_values);
-  bc_values.add_const(BDY_REST, 1.0);
+  EssentialBCs bcs(Hermes::vector<EssentialBoundaryCondition *>(&bc_rest, &bc_layer));
 
   // Create an H1 space with default shapeset.
-  H1Space space(&mesh, &bc_types, &bc_values, P_INIT);
-
-  // Initialize the weak formulation.
-  WeakForm wf;
-  wf.add_matrix_form(callback(bilinear_form));
-  if (STABILIZATION_ON == true) {
-    wf.add_matrix_form(callback(bilinear_form_stabilization));
-  }
-  if (SHOCK_CAPTURING_ON == true) {
-    wf.add_matrix_form(callback(bilinear_form_shock_capturing));
-  }
+  H1Space space(&mesh, &bcs, P_INIT);
 
   WinGeom* sln_win_geom = new WinGeom(0, 0, 440, 350);
   WinGeom* mesh_win_geom = new WinGeom(450, 0, 400, 350);
@@ -137,15 +112,16 @@ int main(int argc, char* argv[])
     info("---- Adaptivity step %d:", as);
 
     // Construct globally refined reference mesh and setup reference space.
-    Space* ref_space = construct_refined_space(&space);
+    Space* ref_space = Space::construct_refined_space(&space);
 
-    // Assemble the reference problem.
-    info("Solving on reference mesh.");
-    bool is_linear = true;
-    DiscreteProblem* dp = new DiscreteProblem(&wf, ref_space, is_linear);
+    // Initialize matrix solver.
     SparseMatrix* matrix = create_matrix(matrix_solver);
     Vector* rhs = create_vector(matrix_solver);
     Solver* solver = create_linear_solver(matrix_solver, matrix, rhs);
+
+    // Assemble the reference problem.
+    info("Solving on reference mesh.");
+    DiscreteProblem* dp = new DiscreteProblem(&wf, ref_space);
     dp->assemble(matrix, rhs);
 
     // Time measurement.

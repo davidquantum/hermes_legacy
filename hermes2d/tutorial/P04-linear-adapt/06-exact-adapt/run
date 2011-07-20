@@ -1,4 +1,0 @@
-rm *~ 
-./exact-adapt
-python plot_graph.py &
-

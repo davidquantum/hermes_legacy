@@ -1,6 +1,9 @@
 Mumps
 -----
 
+.. popup:: '#'
+   ../../../_static/clapper.png
+
 .. _MUMPS home page: http://graal.ens-lyon.fr/MUMPS/index.php
 .. _solvers repository: https://github.com/hpfem/solvers
 .. _manual: https://github.com/hpfem/solvers/raw/master/manuals/MUMPS_4.9.2.pdf

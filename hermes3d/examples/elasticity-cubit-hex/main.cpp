@@ -46,17 +46,17 @@ int bdy_force = 2;
 // Boundary condition types. 
 BCType bc_types_x(int marker) 
 {
-  return (marker == bdy_fixed) ? BC_ESSENTIAL : BC_NATURAL;
+  return (marker == bdy_fixed) ? H3D_BC_ESSENTIAL : H3D_BC_NATURAL;
 }
 
 BCType bc_types_y(int marker) 
 {
-  return (marker == bdy_fixed) ? BC_ESSENTIAL : BC_NATURAL;
+  return (marker == bdy_fixed) ? H3D_BC_ESSENTIAL : H3D_BC_NATURAL;
 }
 
 BCType bc_types_z(int marker) 
 {
-  return (marker == bdy_fixed) ? BC_ESSENTIAL : BC_NATURAL;
+  return (marker == bdy_fixed) ? H3D_BC_ESSENTIAL : H3D_BC_NATURAL;
 }
 
 // Essential (Dirichlet) boundary condition values. 
@@ -65,7 +65,7 @@ scalar essential_bc_values(int ess_bdy_marker, double x, double y, double z)
   return 0;
 }
 
-#include "forms.cpp"
+#include "definitions.cpp"
 
 int main(int argc, char **args) 
 {

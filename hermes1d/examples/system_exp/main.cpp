@@ -43,7 +43,7 @@ double f_1(double x) {
 }
 
 // Weak forms for Jacobi matrix and residual.
-#include "forms.cpp"
+#include "definitions.cpp"
 
 
 int main() 
@@ -124,6 +124,22 @@ int main()
 
   // Plot the resulting space.
   space->plot("space.gp");
+
+  // Cleanup.
+  for(unsigned i = 0; i < DIR_BC_LEFT.size(); i++)
+      delete DIR_BC_LEFT[i];
+  DIR_BC_LEFT.clear();
+
+  for(unsigned i = 0; i < DIR_BC_RIGHT.size(); i++)
+      delete DIR_BC_RIGHT[i];
+  DIR_BC_RIGHT.clear();
+
+  delete matrix;
+  delete rhs;
+  delete solver;
+  delete[] coeff_vec;
+  delete dp;
+  delete space;
 
   info("Done.");
   return 0;

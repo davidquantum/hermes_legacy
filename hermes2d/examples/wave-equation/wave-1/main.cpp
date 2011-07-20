@@ -1,16 +1,21 @@
 #define HERMES_REPORT_ALL
 #define HERMES_REPORT_FILE "application.log"
-#include "hermes2d.h"
+#include "definitions.h"
 
 // This example solves a simple linear wave equation by converting it 
-// into a system of two first-order equations in time. Time discretization
-// is done using the implicit Euler method.
+// into a system of two first-order equations in time. Time discretization 
+// is performed using arbitrary (explicit or implicit, low-order or higher-order) 
+// Runge-Kutta methods entered via their Butcher's tables.
+// For a list of available R-K methods see the file hermes_common/tables.h.
 //
-// PDE: \frac{\partial^2 u}{\partial t^2} - \Delta u = 0,
+// The function rk_time_step() needs more optimisation, see a todo list at 
+// the beginning of file src/runge-kutta.h.
+//
+// PDE: \frac{1}{C_SQUARED}\frac{\partial^2 u}{\partial t^2} - \Delta u = 0,
 // converted into
 //
-//      \frac{\partial u}{\partial t} - v = 0,
-//      \frac{\partial v}{\partial t} - \Delta u = 0.
+//      \frac{\partial u}{\partial t} = v,
+//      \frac{\partial v}{\partial t} = C_SQUARED * \Delta u.
 //
 // BC:  u = 0 on the boundary,
 //      v = 0 on the boundary (u = 0 => \partial u / \partial t = 0).
@@ -20,29 +25,38 @@
 // The following parameters can be changed:
 
 const int P_INIT = 6;                              // Initial polynomial degree of all elements.
-const double TAU = 0.01;                           // Time step.
-const double T_FINAL = 2.15;                       // Final time.
+const double time_step = 0.01;                     // Time step.
+const double T_FINAL = 2.0;                        // Final time.
 MatrixSolverType matrix_solver = SOLVER_UMFPACK;   // Possibilities: SOLVER_AMESOS, SOLVER_AZTECOO, SOLVER_MUMPS,
-                                                   // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 
-// Boundary markers.
-const int BDY = 1;
+// Choose one of the following time-integration methods, or define your own Butcher's table. The last number 
+// in the name of each method is its order. The one before last, if present, is the number of stages.
+// Explicit methods:
+//   Explicit_RK_1, Explicit_RK_2, Explicit_RK_3, Explicit_RK_4.
+// Implicit methods: 
+//   Implicit_RK_1, Implicit_Crank_Nicolson_2_2, Implicit_SIRK_2_2, Implicit_ESIRK_2_2, Implicit_SDIRK_2_2, 
+//   Implicit_Lobatto_IIIA_2_2, Implicit_Lobatto_IIIB_2_2, Implicit_Lobatto_IIIC_2_2, Implicit_Lobatto_IIIA_3_4, 
+//   Implicit_Lobatto_IIIB_3_4, Implicit_Lobatto_IIIC_3_4, Implicit_Radau_IIA_3_5, Implicit_SDIRK_5_4.
+// Embedded explicit methods:
+//   Explicit_HEUN_EULER_2_12_embedded, Explicit_BOGACKI_SHAMPINE_4_23_embedded, Explicit_FEHLBERG_6_45_embedded,
+//   Explicit_CASH_KARP_6_45_embedded, Explicit_DORMAND_PRINCE_7_45_embedded.
+// Embedded implicit methods:
+//   Implicit_SDIRK_CASH_3_23_embedded, Implicit_ESDIRK_TRBDF2_3_23_embedded, Implicit_ESDIRK_TRX2_3_23_embedded, 
+//   Implicit_SDIRK_BILLINGTON_3_23_embedded, Implicit_SDIRK_CASH_5_24_embedded, Implicit_SDIRK_CASH_5_34_embedded, 
+//   Implicit_DIRK_ISMAIL_7_45_embedded. 
+ButcherTableType butcher_table_type = Implicit_RK_1;
 
 // Problem parameters.
 const double C_SQUARED = 100;                      // Square of wave speed.                     
 
-// Initial condition for u.
-double init_cond_u(double x, double y, double& dx, double& dy) {
-  dx = exp(-x*x - y*y) * (-2*x);
-  dy = exp(-x*x - y*y) * (-2*y);
-  return exp(-x*x - y*y);
-}
-
-// Weak forms.
-#include "forms.cpp"
-
 int main(int argc, char* argv[])
 {
+  // Choose a Butcher's table or define your own.
+  ButcherTable bt(butcher_table_type);
+  if (bt.is_explicit()) info("Using a %d-stage explicit R-K method.", bt.get_size());
+  if (bt.is_diagonally_implicit()) info("Using a %d-stage diagonally implicit R-K method.", bt.get_size());
+  if (bt.is_fully_implicit()) info("Using a %d-stage fully implicit R-K method.", bt.get_size());
+
   // Load the mesh.
   Mesh mesh;
   H2DReader mloader;
@@ -51,47 +65,31 @@ int main(int argc, char* argv[])
   // Convert to quadrilaterals.
   mesh.convert_triangles_to_quads();
 
+  // Refine towards boundary.
+  mesh.refine_towards_boundary("Bdy", 1, true);
+
   // Refine once towards vertex #4.
   mesh.refine_towards_vertex(4, 1);
 
-  // Refine towards boundary.
-  mesh.refine_towards_boundary(1, 1);
-
-  // Enter boundary markers.
-  BCTypes bc_types;
-  bc_types.add_bc_dirichlet(BDY);
-
-  // Enter Dirichlet boundary values;
-  BCValues bc_values;
-  bc_values.add_zero(BDY);
-
-  // Create x- and y- displacement space using the default H1 shapeset.
-  H1Space u_space(&mesh, &bc_types, &bc_values, P_INIT);
-  H1Space v_space(&mesh, &bc_types, &bc_values, P_INIT);
-  info("ndof = %d.", Space::get_num_dofs(Hermes::vector<Space *>(&u_space, &v_space)));
-
   // Initialize solutions.
-  Solution u_sln(&mesh, init_cond_u);
+  CustomInitialConditionWave u_sln(&mesh);
   Solution v_sln(&mesh, 0.0);
+  Hermes::vector<Solution*> slns(&u_sln, &v_sln);
 
   // Initialize the weak formulation.
-  WeakForm wf(2);
-  wf.add_matrix_form(0, 0, callback(bilinear_form_0_0));  
-  wf.add_matrix_form(0, 1, callback(bilinear_form_0_1));  
-  wf.add_matrix_form(1, 0, callback(bilinear_form_1_0));  
-  wf.add_matrix_form(1, 1, callback(bilinear_form_1_1));  
-  wf.add_vector_form(0, callback(linear_form_0), HERMES_ANY, &u_sln);  
-  wf.add_vector_form(1, callback(linear_form_1), HERMES_ANY, &v_sln);  
+  CustomWeakFormWave wf(time_step, C_SQUARED, &u_sln, &v_sln);
+  
+  // Initialize boundary conditions
+  DefaultEssentialBCConst bc_essential("Bdy", 0.0);
+  EssentialBCs bcs(&bc_essential);
+
+  // Create x- and y- displacement space using the default H1 shapeset.
+  H1Space u_space(&mesh, &bcs, P_INIT);
+  H1Space v_space(&mesh, &bcs, P_INIT);
+  info("ndof = %d.", Space::get_num_dofs(Hermes::vector<Space *>(&u_space, &v_space)));
 
   // Initialize the FE problem.
-  bool is_linear = true;
-  DiscreteProblem dp(&wf, Hermes::vector<Space *>(&u_space, &v_space), is_linear);
-
-  // Set up the solver, matrix, and rhs according to the solver selection.
-  SparseMatrix* matrix = create_matrix(matrix_solver);
-  Vector* rhs = create_vector(matrix_solver);
-  Solver* solver = create_linear_solver(matrix_solver, matrix, rhs);
-  solver->set_factorization_scheme(HERMES_REUSE_FACTORIZATION_COMPLETELY);
+  DiscreteProblem dp(&wf, Hermes::vector<Space *>(&u_space, &v_space));
 
   // Initialize views.
   ScalarView u_view("Solution u", new WinGeom(0, 0, 500, 400));
@@ -101,27 +99,23 @@ int main(int argc, char* argv[])
   //v_view.show_mesh(false);
   v_view.fix_scale_width(50);
 
+  // Initialize Runge-Kutta time stepping.
+  RungeKutta runge_kutta(&dp, &bt, matrix_solver);
+
   // Time stepping loop.
-  double current_time = TAU; int ts = 1;
-  bool rhs_only = false;
-  do 
+  double current_time = 0; int ts = 1;
+  do
   {
-    info("---- Time step %d, t = %g s.", ts, current_time); ts++;
+    // Perform one Runge-Kutta time step according to the selected Butcher's table.
+    info("Runge-Kutta time step (t = %g s, time_step = %g s, stages: %d).", 
+         current_time, time_step, bt.get_size());
+    bool jacobian_changed = false;
+    bool verbose = true;
 
-    // First time assemble both the stiffness matrix and right-hand side vector,
-    // then just the right-hand side vector.
-    if (rhs_only == false) info("Assembling the stiffness matrix and right-hand side vector.");
-    else info("Assembling the right-hand side vector (only).");
-    dp.assemble(matrix, rhs, rhs_only);
-    rhs_only = true;
+    if (!runge_kutta.rk_time_step(current_time, time_step, slns, 
+                                  slns, jacobian_changed, verbose))
+      error("Runge-Kutta time step failed, try to decrease time step size.");
 
-    // Solve the linear system and if successful, obtain the solutions.
-    info("Solving the matrix problem.");
-    if(solver->solve()) Solution::vector_to_solutions(solver->get_solution(), 
-                                                      Hermes::vector<Space *>(&u_space, &v_space), 
-                                                      Hermes::vector<Solution *>(&u_sln, &v_sln));
-    else error ("Matrix solver failed.\n");
-  
     // Visualize the solutions.
     char title[100];
     sprintf(title, "Solution u, t = %g", current_time);
@@ -132,18 +126,12 @@ int main(int argc, char* argv[])
     v_view.show(&v_sln);
 
     // Update time.
-    current_time += TAU;
+    current_time += time_step;
 
   } while (current_time < T_FINAL);
 
   // Wait for the view to be closed.
   View::wait();
 
-  // Clean up.
-  delete solver;
-  delete matrix;
-  delete rhs;
-
   return 0;
 }
-

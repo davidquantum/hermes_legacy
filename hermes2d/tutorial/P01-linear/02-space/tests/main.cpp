@@ -7,22 +7,15 @@ int main(int argc, char* argv[])
   // load the mesh file
   Mesh mesh;
   H2DReader mloader;
-  mloader.load("domain.mesh", &mesh);            // original L-shape domain
-  //mloader.load("domain_quad.mesh", &mesh);     // reference square
-  //mloader.load("domain_tri.mesh", &mesh);      // reference triangle
+  mloader.load("../domain.mesh", &mesh);            // original L-shape domain
+  //mloader.load("../domain_quad.mesh", &mesh);     // reference square
+  //mloader.load("../domain_tri.mesh", &mesh);      // reference triangle
 
   // sample element refinement, to see more basis functions
   //mesh.refine_all_elements();
 
-  // Enter boundary markers 
-  // (If no markers are entered, default is a natural BC).
-  BCTypes bc_types;
-
-  // Enter Dirichlet boundary values (default is zero).
-  BCValues bc_values;
-
   // Create an H1 space with default shapeset and natural BC.
-  H1Space space(&mesh, &bc_types, &bc_values, 1);
+  H1Space space(&mesh, 1);
 
   // new code for the test
   int n_dof[10], dof_max[10];

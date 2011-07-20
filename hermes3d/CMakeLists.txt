@@ -71,23 +71,23 @@ endif(NOT(VERS_LEN GREATER 0))
 
 if(MSVC)
     if(H3D_REAL)
-        set(HERMES3D_REAL hermes3d-real)                # Base name of the library.
+        set(HERMES3D_REAL "hermes3d-real")              # Base name of the library.
         set(HERMES3D_REAL_RELEASE ${HERMES3D_REAL})     # Name of the release version.
         set(HERMES3D_REAL_DEBUG ${HERMES3D_REAL}-debug) # Name of the debug version.
     endif(H3D_REAL)
     if(H3D_COMPLEX)
-        set(HERMES3D_CPLX hermes3d-cplx)
+        set(HERMES3D_CPLX "hermes3d-cplx")
         set(HERMES3D_CPLX_RELEASE ${HERMES3D_CPLX})
         set(HERMES3D_CPLX_DEBUG ${HERMES3D_CPLX}-debug)
     endif(H3D_COMPLEX)
 else(MSVC)
   if(DEBUG)
     if(H3D_REAL)
-      set(HERMES3D_REAL_DEBUG hermes3d-real-debug)
+      set(HERMES3D_REAL_DEBUG "hermes3d-real-debug")
       set(HERMES3D_REAL ${HERMES3D_REAL_DEBUG})
     endif(H3D_REAL)
     if(H3D_COMPLEX)
-      set(HERMES3D_CPLX_DEBUG hermes3d-cplx-debug)
+      set(HERMES3D_CPLX_DEBUG "hermes3d-cplx-debug")
       set(HERMES3D_CPLX ${HERMES3D_CPLX_DEBUG})
     endif(H3D_COMPLEX)
     
@@ -98,11 +98,11 @@ else(MSVC)
 
   if(RELEASE)
     if(H3D_REAL)
-      set(HERMES3D_REAL_RELEASE hermes3d-real)
+      set(HERMES3D_REAL_RELEASE "hermes3d-real")
       set(HERMES3D_REAL ${HERMES3D_REAL_RELEASE})
     endif(H3D_REAL)
     if(H3D_COMPLEX)
-      set(HERMES3D_CPLX_RELEASE hermes3d-cplx)
+      set(HERMES3D_CPLX_RELEASE "hermes3d-cplx")
       set(HERMES3D_CPLX ${HERMES3D_CPLX_RELEASE})
     endif(H3D_COMPLEX)
 
@@ -160,17 +160,16 @@ set(OUTPUT_DIR "" CACHE STRING "Directory were the output will be written")
 #
 
 # We require Python for the mesh parser (it also needs NumPy)
-if(NOT Python_FOUND OR NOT NumPy_FOUND)
+if(NOT PYTHON_FOUND OR NOT NUMPY_FOUND)
   find_package(Python REQUIRED)
   find_package(NumPy REQUIRED)
   include_directories(${PYTHON_INCLUDE_PATH} ${NUMPY_INCLUDE_PATH})
-  
-  # This path will be used relatively to CMAKE_INSTALL_PREFIX.
-  set(PYTHON_INSTALL_PATH lib/python/site-packages)  
-endif(NOT Python_FOUND OR NOT NumPy_FOUND)    
+endif(NOT PYTHON_FOUND OR NOT NUMPY_FOUND)    
 
 if(WITH_PYTHON)
   #find_package(PythonLibs REQUIRED)
+  set(CYTHON_INCLUDE_DIRECTORIES -I.)
+  set(CYTHON_INCLUDE_DIRECTORIES ${CYTHON_INCLUDE_DIRECTORIES} -I${CMAKE_SOURCE_DIR}/hermes_common)
   add_subdirectory(python)
 endif(WITH_PYTHON)
 

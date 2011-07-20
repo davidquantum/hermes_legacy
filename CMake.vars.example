@@ -1,13 +1,17 @@
 # This is a sample CMake.vars file for Hermes.
 #
+# NOTE: After making any change, remove the file CMakeCache.txt.
+#
 # It contains compilation options that let you customize Hermes on your 
 # system. Options set here override the default ones set in CMakeLists.txt.
 #
 # NOTE: when specifying paths, always use absolute paths (such as 
 # "/home/pavel/something" instead of "~/something").
  
-# Enable Python
-set(WITH_PYTHON YES)
+# Uncomment one or more of these lines to disable Hermes1D / Hermes2D / Hermes3D:
+# set(WITH_H1D NO)
+# set(WITH_H2D NO)
+# set(WITH_H3D NO)
 
 # Enable UMFPACK (linear solvers, this option is YES by default)
 set(WITH_UMFPACK YES)
@@ -46,3 +50,38 @@ SET(WITH_EXODUSII YES)
 SET(EXODUSII_ROOT /opt/packages/exodusii)
 SET(NETCDF_ROOT /opt/packages/netcdf)
 
+#------------------------   INSTALLATION   --------------------------
+
+# Installation directory. If not set, 'sudo make install' will 
+# install the Hermes library into a default directory - typically 
+#   /usr/local/lib,
+#   /usr/local/include/hermes,  
+#   /usr/local/lib/python (see also how to set PYTHON_INSTALL_PATH below). 
+# If set as follows, the library files will be installed into 
+#   /home/pavel/build/hermes/lib, 
+#   /home/pavel/build/hermes/include,
+#   /home/pavel/build/hermes/lib/python
+# In this way, the library may be installed e.g. into user's home 
+# directory without needing the administrator rights:
+#
+   set(CMAKE_INSTALL_PREFIX    /home/pavel/build/hermes)
+
+# Installation directory for Python wrappers.
+# Typing 'make install' (or 'sudo make install') will
+# also create Python wrappers and install them to directories shown
+# above. You may also install them into a different directory by 
+# setting PYTHON_INSTALL_PATH appropriately, or into a default place 
+# where Python stores its modules (execute the following command to 
+# see where it is on your computer:
+#   python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"
+# ). This makes importing the wrappers in your Python scripts a bit 
+# easier, but might require administrator rights. It is done by:
+# 
+#  set(PYTHON_INSTALL_PATH   USE_SYSTEM_PYTHON_DIRECTORY)
+
+# Uncomment when making install.
+#set(WITH_H1D NO)
+#set(WITH_H3D NO)
+#set(H2D_WITH_TUTORIAL NO)
+#set(H2D_WITH_EXAMPLES NO)
+#set(H2D_WITH_BENCHMARKS NO)

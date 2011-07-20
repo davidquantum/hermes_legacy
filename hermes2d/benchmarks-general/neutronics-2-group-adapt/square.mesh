@@ -1,0 +1,37 @@
+a = 0
+b = 1
+#c = 0.5*(a+b)
+c = 0.5
+
+vertices = [
+  [ a, a ],
+  [ c, a ],
+  [ b, a ],
+  [ a, c ],
+  [ c, c ],
+  [ b, c ],
+  [ a, b ],
+  [ c, b ],
+  [ b, b ]
+]
+
+elements = [
+  [ 0, 1, 4, 3, "region1" ],
+  [ 1, 2, 5, 4, "region2" ],
+  [ 4, 5, 8, 7, "region3" ],
+  [ 3, 4, 7, 6, "region4" ]
+]
+
+boundaries = [
+  [ 0, 1, "zero_flux" ],
+  [ 1, 2, "zero_flux" ],
+  [ 2, 5, "gamma" ],
+  [ 5, 8, "gamma" ],
+  [ 8, 7, "symmetry" ],
+  [ 7, 6, "symmetry" ],
+  [ 6, 3, "symmetry" ],
+  [ 3, 0, "symmetry" ]
+]
+
+
+

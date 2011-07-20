@@ -9,8 +9,6 @@
 #define ERROR_SUCCESS                               0
 #define ERROR_FAILURE                               -1
 
-const int PRINT = 0;
-
 //  The following parameters can be changed:
 const int NEQ = 5;                      // Number of equations.
 const int NELEM = 5;                    // Number of elements.
@@ -31,7 +29,7 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
                                                   // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 
 // Boundary conditions.
-Hermes::vector<BCSpec *> DIR_BC_LEFT =  Hermes::vector<BCSpec *>(new BCSpec(0,0), new BCSpec(0,0), new BCSpec(0,0), new BCSpec(0,0), new BCSpec(0,0));
+Hermes::vector<BCSpec *> DIR_BC_LEFT =  Hermes::vector<BCSpec *>(new BCSpec(0,0), new BCSpec(1,0), new BCSpec(2,0), new BCSpec(3,0), new BCSpec(4,0));
 Hermes::vector<BCSpec *> DIR_BC_RIGHT = Hermes::vector<BCSpec *>();
 
 // Controls.
@@ -43,7 +41,7 @@ double zeta_ctrl[N_ctrl] = {0, 0, 0, 0};
 
 
 // Include weak forms.
-#include "forms.cpp"
+#include "../definitions.cpp"
 
 void compute_trajectory(Space *space, DiscreteProblem *dp) 
 {
@@ -88,8 +86,7 @@ void compute_trajectory(Space *space, DiscreteProblem *dp)
     for(int i=0; i<ndof; i++) rhs->set(i, -rhs->get(i));
 
     // Solve the linear system.
-    if(!(success = solver->solve()))
-      error ("Matrix solver failed.\n");
+    if(!(success = solver->solve())) error ("Matrix solver failed.\n");
 
     // Add \deltaY^{n+1} to Y^n.
     for (int i = 0; i < ndof; i++) coeff_vec[i] += solver->get_solution()[i];

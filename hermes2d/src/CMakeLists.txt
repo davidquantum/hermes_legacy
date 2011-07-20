@@ -19,14 +19,15 @@ set(SRC
        mesh/refinement_type.cpp 
        mesh/element_to_refine.cpp
        mesh/exodusii.cpp 
-       mesh/hash.cpp 
+       mesh/hash.cpp
+	   mesh/mesh2d_parser.cpp
        mesh/h2d_reader.cpp
        mesh/mesh.cpp 
        mesh/regul.cpp 
        mesh/transform.cpp 
        mesh/traverse.cpp
        mesh/trans.cpp
-       mesh/python_reader.cpp
+       #mesh/python_reader.cpp
 
        quadrature/limit_order.cpp
        quadrature/quad_std.cpp
@@ -69,13 +70,20 @@ set(SRC
        weakform/weakform.cpp 
 
        neighbor.cpp
-       numerical_flux.cpp
        graph.cpp
        ogprojection.cpp
        h2d_common.cpp  
        discrete_problem.cpp
        runge_kutta.cpp
-       boundaryconditions/boundaryconditions.cpp
+       function/spline.cpp
+       boundaryconditions/essential_bcs.cpp
+       hermes_module.cpp
+	   
+	   weakform_library/weakforms_elasticity.cpp
+	   weakform_library/weakforms_h1.cpp
+	   weakform_library/weakforms_hcurl.cpp
+	   weakform_library/weakforms_maxwell.cpp
+	   weakform_library/weakforms_neutronics.cpp
        )
 
 #
@@ -93,9 +101,38 @@ macro(BUILD_LIB HERMES_LIB HERMES_COMMON_LIB BUILD_FLAGS)
 
   set(_FLAGS ${BUILD_FLAGS})
 
+  if(NOT REPORT_WITH_LOGO)
+    set(_FLAGS "${_FLAGS} -DH2D_NO_LOGO")
+  endif(NOT REPORT_WITH_LOGO)
+  if(NOT REPORT_TO_FILE)
+    set(_FLAGS "${_FLAGS} -DH2D_REPORT_NO_FILE")
+  endif(NOT REPORT_TO_FILE)
   if(REPORT_RUNTIME_CONTROL)
-    set(_FLAGS "${_FLAGS} -DHERMES_REPORT_RUNTIME_CONTROL")
+    set(_FLAGS "${_FLAGS} -DH2D_REPORT_RUNTIME_CONTROL")
   endif(REPORT_RUNTIME_CONTROL)
+  if(REPORT_ALL)
+    set(_FLAGS "${_FLAGS} -DHERMES_REPORT_ALL")
+  else(REPORT_ALL)
+    if(REPORT_WARNING)
+      set(_FLAGS "${_FLAGS} -DHERMES_REPORT_WARNING")
+    endif(REPORT_WARNING)
+    if(REPORT_INTR_WARNING)
+      set(_FLAGS "${_FLAGS} -DHERMES_REPORT_INTR_WARNING")
+    endif(REPORT_INTR_WARNING)
+    if(REPORT_INFO)
+      set(_FLAGS "${_FLAGS} -DHERMES_REPORT_INFO")
+    endif(REPORT_INFO)
+    if(REPORT_VERBOSE)
+      set(_FLAGS "${_FLAGS} -DHERMES_REPORT_VERBOSE")
+    endif(REPORT_VERBOSE)
+    if(REPORT_TRACE)
+      set(_FLAGS "${_FLAGS} -DHERMES_REPORT_TRACE")
+    endif(REPORT_TRACE)
+    if(REPORT_TIME)
+      set(_FLAGS "${_FLAGS} -DHERMES_REPORT_TIME")
+    endif(REPORT_TIME)
+  endif(REPORT_ALL)
+
   if(WITH_VIEWER_GUI)
     set(_FLAGS "${_FLAGS} -DENABLE_VIEWER_GUI")
   endif(WITH_VIEWER_GUI)
@@ -173,6 +210,7 @@ file(GLOB INC_QUAD      "${CMAKE_CURRENT_SOURCE_DIR}/quadrature/*.h")
 file(GLOB INC_REF_SEL   "${CMAKE_CURRENT_SOURCE_DIR}/ref_selectors/*.h")
 file(GLOB INC_VIEWS     "${CMAKE_CURRENT_SOURCE_DIR}/views/*.h")
 file(GLOB INC_WEAKFORM  "${CMAKE_CURRENT_SOURCE_DIR}/weakform/*.h")
+file(GLOB INC_WEAKFORM_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/weakform_library/*.h")
 
 install(FILES ${INC}           DESTINATION include/hermes/hermes2d/src/)
 install(FILES ${INC_SPACE}     DESTINATION include/hermes/hermes2d/src/space)
@@ -187,3 +225,4 @@ install(FILES ${INC_QUAD}      DESTINATION include/hermes/hermes2d/src/quadratur
 install(FILES ${INC_REF_SEL}   DESTINATION include/hermes/hermes2d/src/ref_selectors)
 install(FILES ${INC_VIEWS}     DESTINATION include/hermes/hermes2d/src/views)
 install(FILES ${INC_WEAKFORM}  DESTINATION include/hermes/hermes2d/src/weakform)
+install(FILES ${INC_WEAKFORM_LIBRARY}  DESTINATION include/hermes/hermes2d/src/weakform_library)

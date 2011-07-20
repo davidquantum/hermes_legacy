@@ -1,33 +1,36 @@
 #define HERMES_REPORT_ALL
 #define HERMES_REPORT_FILE "application.log"
-#include "hermes2d.h"
+#include "definitions.h"
 #include "runge_kutta.h"
 
+using namespace RefinementSelectors;
+
 //  This example models a nonstationary distribution of temperature within a wall
-//  exposed to ISO fire.
+//  exposed to ISO fire. Adaptivity in time is performed.
 //
 //  PDE: non-stationary heat transfer equation
-//       HEATCAP * RHO * dT/dt - LAMBDA * Laplace T = 0.
-//  This equation is, however, written in such a way that the time-derivative 
-//  is on the left and everything else on the right:
+//       HEATCAP * RHO * dT/dt - div (LAMBDA grad T) = 0.
+//  Here LAMBDA(x, y) is an external, user-defined function.
 //
-//  dT/dt = LAMBDA * Laplace T / (HEATCAP * RHO).
+//  For the sake of using arbitrary RK methods, this equation is written in such 
+//  a way that the time-derivative is on the left and everything else on the right:
 //
-//  We only need the weak formulation of the right-hand side.
+//  dT/dt = div(LAMBDA grad T) / (HEATCAP * RHO)
 //
 //  Domain: rectangle 4.0 x 0.5 (file wall.mesh).
 //
 //  IC:  T = TEMP_INIT.
-//  BC:  Bottom edge: dT/dn = ALPHA_BOTTOM*(T_fire(x, time) - T)
+//  BC:  Bottom edge: LAMBDA * dT/dn = ALPHA_BOTTOM*(T_fire(x, time) - T)
 //       Vertical edges: dT/dn = 0 
-//       Top edge: dT/dn = ALPHA_TOP*(TEMP_EXT_TOP - T)
+//       Top edge: LAMBDA * dT/dn = ALPHA_TOP*(TEMP_EXT_AIR - T)
 //
-//  Time-stepping: Arbitrary Runge-Kutta methods.
+//  Time-stepping: Arbitrary Runge-Kutta methods (choose one of the predefined 
+//                 Butcher's tables below or create your own).
 //
 //  The following parameters can be changed:
 
 const int P_INIT = 3;                             // Polynomial degree of all mesh elements.
-const int INIT_REF_NUM = 2;                       // Number of initial uniform mesh refinements.
+const int INIT_REF_NUM = 3;                       // Number of initial uniform mesh refinements.
 const int INIT_REF_NUM_BDY = 3;                   // Number of initial uniform mesh refinements towards the boundary.
 double time_step = 20;                            // Time step in seconds.
 const double NEWTON_TOL = 1e-5;                   // Stopping criterion for the Newton's method.
@@ -48,7 +51,7 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
 // Implicit methods: 
 //   Implicit_RK_1, Implicit_Crank_Nicolson_2_2, Implicit_SIRK_2_2, Implicit_ESIRK_2_2, Implicit_SDIRK_2_2, 
 //   Implicit_Lobatto_IIIA_2_2, Implicit_Lobatto_IIIB_2_2, Implicit_Lobatto_IIIC_2_2, Implicit_Lobatto_IIIA_3_4, 
-//   Implicit_Lobatto_IIIB_3_4, Implicit_Lobatto_IIIC_3_4, Implicit_Radau_IIA_3_5, Implicit_SDIRK_4_5.
+//   Implicit_Lobatto_IIIB_3_4, Implicit_Lobatto_IIIC_3_4, Implicit_Radau_IIA_3_5, Implicit_SDIRK_5_4.
 // Embedded explicit methods:
 //   Explicit_HEUN_EULER_2_12_embedded, Explicit_BOGACKI_SHAMPINE_4_23_embedded, Explicit_FEHLBERG_6_45_embedded,
 //   Explicit_CASH_KARP_6_45_embedded, Explicit_DORMAND_PRINCE_7_45_embedded.
@@ -59,29 +62,26 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
 ButcherTableType butcher_table_type = Implicit_SDIRK_CASH_3_23_embedded;
 
 // Boundary markers.
-const int BDY_BOTTOM = 1;
-const int BDY_RIGHT = 2;
-const int BDY_TOP = 3;
-const int BDY_LEFT = 4;
+const std::string BDY_FIRE = "Bottom";
+const std::string BDY_LEFT = "Left";
+const std::string BDY_RIGHT = "Right";
+const std::string BDY_AIR  = "Top";
 
 // Problem parameters.
 const double TEMP_INIT = 20;       // Initial temperature.
-const double TEMP_EXT_TOP = 20;    // Exterior temperature top;
+const double TEMP_EXT_AIR = 20;    // Exterior temperature top;
 
-const double ALPHA_BOTTOM = 25;    // Heat flux coefficient on the bottom edge.
-const double ALPHA_TOP = 8;        // Heat flux coefficient on the top edge.
+const double ALPHA_FIRE = 25;      // Heat flux coefficient on the bottom edge.
+const double ALPHA_AIR = 8;        // Heat flux coefficient on the top edge.
 const double HEATCAP = 1020;       // Heat capacity.
 const double RHO = 2200;           // Material density.
-const double T_FINAL = 4000;       // Length of time interval in seconds.
-
-// Problem-specific functions.
-#include "extras.cpp"
-
-// Weak forms.
-#include "forms.cpp"
+const double T_FINAL = 18000;      // Length of time interval in seconds.
 
 int main(int argc, char* argv[])
 {
+  // Instantiate a class with global functions.
+  Hermes2D hermes2d;
+
   // Choose a Butcher's table or define your own.
   ButcherTable bt(butcher_table_type);
   if (bt.is_explicit()) info("Using a %d-stage explicit R-K method.", bt.get_size());
@@ -95,15 +95,14 @@ int main(int argc, char* argv[])
 
   // Perform initial mesh refinements.
   for(int i = 0; i < INIT_REF_NUM; i++) mesh.refine_all_elements();
-  mesh.refine_towards_boundary(BDY_BOTTOM, INIT_REF_NUM_BDY);
+  mesh.refine_towards_boundary(BDY_RIGHT, 2);
+  mesh.refine_towards_boundary(BDY_FIRE, INIT_REF_NUM_BDY);
 
-  // Enter boundary markers.
-  BCTypes bc_types;
-  bc_types.add_bc_neumann(Hermes::vector<int>(BDY_RIGHT, BDY_LEFT));
-  bc_types.add_bc_newton(Hermes::vector<int>(BDY_BOTTOM, BDY_TOP));
+  // Initialize essential boundary conditions (none).
+  EssentialBCs bcs;
 
   // Initialize an H1 space with default shapeset.
-  H1Space space(&mesh, &bc_types, NULL, P_INIT);
+  H1Space space(&mesh, &bcs, P_INIT);
   int ndof = Space::get_num_dofs(&space);
   info("ndof = %d.", ndof);
  
@@ -112,18 +111,13 @@ int main(int argc, char* argv[])
   Solution* sln_time_new = new Solution(&mesh);
   Solution* time_error_fn = new Solution(&mesh, 0.0);
 
-  // Initialize weak formulation.
-  WeakForm wf;
-  wf.add_matrix_form(stac_jacobian_vol, stac_jacobian_vol_ord, HERMES_NONSYM, HERMES_ANY, sln_time_prev);
-  wf.add_vector_form(stac_residual_vol, stac_residual_vol_ord, HERMES_ANY, sln_time_prev);
-  wf.add_matrix_form_surf(stac_jacobian_bottom, stac_jacobian_bottom_ord, BDY_BOTTOM, sln_time_prev);
-  wf.add_vector_form_surf(stac_residual_bottom, stac_residual_bottom_ord, BDY_BOTTOM, sln_time_prev);
-  wf.add_matrix_form_surf(stac_jacobian_top, stac_jacobian_top_ord, BDY_TOP, sln_time_prev);
-  wf.add_vector_form_surf(stac_residual_top, stac_residual_top_ord, BDY_TOP, sln_time_prev);
+  // Initialize the weak formulation.
+  double current_time = 0;
+  CustomWeakFormHeatRK wf(BDY_FIRE, BDY_AIR, ALPHA_FIRE, ALPHA_AIR,
+                          RHO, HEATCAP, TEMP_EXT_AIR, TEMP_INIT, &current_time);
 
   // Initialize the FE problem.
-  bool is_linear = true;
-  DiscreteProblem dp(&wf, &space, is_linear);
+  DiscreteProblem dp(&wf, &space);
 
   // Initialize views.
   ScalarView Tview("Temperature", new WinGeom(0, 0, 1500, 400));
@@ -135,17 +129,20 @@ int main(int argc, char* argv[])
   SimpleGraph time_step_graph;
   info("Time step history will be saved to file time_step_history.dat.");
 
+  // Initialize Runge-Kutta time stepping.
+  RungeKutta runge_kutta(&dp, &bt, matrix_solver);
+
   // Time stepping loop:
-  double current_time = 0; int ts = 1;
+  int ts = 1;
   do 
   {
     // Perform one Runge-Kutta time step according to the selected Butcher's table.
     info("Runge-Kutta time step (t = %g s, tau = %g s, stages: %d).", 
          current_time, time_step, bt.get_size());
+    bool jacobian_changed = false;
     bool verbose = true;
-    bool is_linear = true;
-    if (!rk_time_step(current_time, time_step, &bt, sln_time_prev, sln_time_new, time_error_fn, &dp, matrix_solver,
-		      verbose, is_linear)) {
+    if (!runge_kutta.rk_time_step(current_time, time_step, sln_time_prev, sln_time_new, 
+                                  time_error_fn, jacobian_changed, verbose)) {
       error("Runge-Kutta time step failed, try to decrease time step size.");
     }
 
@@ -161,7 +158,8 @@ int main(int argc, char* argv[])
     // reduced and the entire time step repeated. If yes, then another
     // check is run, and if the relative error is very low, time step 
     // is increased.
-    double rel_err_time = calc_norm(time_error_fn, HERMES_H1_NORM) / calc_norm(sln_time_new, HERMES_H1_NORM) * 100;
+    double rel_err_time = hermes2d.calc_norm(time_error_fn, HERMES_H1_NORM) 
+                          / hermes2d.calc_norm(sln_time_new, HERMES_H1_NORM) * 100;
     info("rel_err_time = %g%%", rel_err_time);
     if (rel_err_time > TIME_TOL_UPPER) {
       info("rel_err_time above upper limit %g%% -> decreasing time step from %g to %g and restarting time step.", 

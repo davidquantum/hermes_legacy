@@ -24,8 +24,8 @@ const int MAX_SCF_ITER = 8;
 // Note: "essential" means that solution value is prescribed.
 BCType bc_types(int marker)
 {
-  if (marker > 0) return BC_ESSENTIAL;
-  else return BC_NATURAL;
+  if (marker > 0) return H3D_BC_ESSENTIAL;
+  else return H3D_BC_NATURAL;
 }
 
 // Essential (Dirichlet) boundary condition values.
@@ -43,7 +43,7 @@ scalar essential_bc_values_poisson(int ess_bdy_marker, double x, double y, doubl
 double TARGET_VALUE = E0;
 
 // Weak forms.
-#include "forms.cpp"
+#include "definitions.cpp"
 
 int P_INIT = P;
 int P_INIT_X = P_INIT;                                   // Uniform polynomial degree of mesh elements (x-direction).
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 
   // Setting up Laplace matrix for solving the Poisson equation. 
   WeakForm wf_poisson;
-  wf_poisson.add_matrix_form(bilinear_form_laplace, bilinear_form_ord1, HERMES_SYM, HERMES_ANY);
+  wf_poisson.add_matrix_form(bilinear_form_laplace, bilinear_form_ord1, HERMES_SYM, HERMES_ANY_INT);
   RCP<SparseMatrix> matrix_Laplace = rcp(new CSCMatrix());
   Solver* solver = create_linear_solver(matrix_solver, matrix_Laplace.get());
   DiscreteProblem dp_poisson(&wf_poisson, &space, is_linear);
@@ -104,9 +104,9 @@ int main(int argc, char* argv[])
   // Initialize the weak formulation for the left hand side, i.e., H.
   info("Initializing weak form...");
   WeakForm wf_left, wf_right;
-  wf_left.add_matrix_form(bilinear_form_left, bilinear_form_ord, HERMES_SYM, HERMES_ANY,
+  wf_left.add_matrix_form(bilinear_form_left, bilinear_form_ord, HERMES_SYM, HERMES_ANY_INT,
                           Hermes::vector<MeshFunction*>(&pot_exact, &wfun_exact,&coul_pot ));
-  wf_right.add_matrix_form(bilinear_form_right, bilinear_form_ord, HERMES_SYM, HERMES_ANY, &wfun_exact);   
+  wf_right.add_matrix_form(bilinear_form_right, bilinear_form_ord, HERMES_SYM, HERMES_ANY_INT, &wfun_exact);   
   DiscreteProblem dp(&wf_left, &space, is_linear);
 
   // Initialize matrices and matrix solver.
@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
   cpu_time.tick();
   info("time taken to assemble RHS matrix: %g s", cpu_time.accumulated());
   WeakForm wf_coulomb;
-  wf_coulomb.add_matrix_form(bilinear_form_coul_pot, bilinear_form_ord1, HERMES_SYM, HERMES_ANY,
+  wf_coulomb.add_matrix_form(bilinear_form_coul_pot, bilinear_form_ord1, HERMES_SYM, HERMES_ANY_INT,
                              Hermes::vector<MeshFunction*>(&wfun_exact,&coul_pot ));
   RCP<SparseMatrix> matrix_coulomb = rcp(new CSCMatrix());
   DiscreteProblem dp_coulomb(&wf_coulomb, &space, is_linear);
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
       eival[ieig]=es.get_eigenvalue(ieig);
       info("eigenvector %d : norm=%25.16f \n eigenvalue=%25.16f \n coulomb_energy=%25.16f ",
            ieig, pow(norm2, 0.5), eival[ieig], coulomb_energy);
-      wf.add_vector_form(linear_form_poisson, linear_form_poisson_ord, HERMES_ANY,
+      wf.add_vector_form(linear_form_poisson, linear_form_poisson_ord, HERMES_ANY_INT,
                          Hermes::vector<MeshFunction*>(&sln, &wfun_exact)); 
       out_fn_vtk(&sln, "phi", ieig);
     }  

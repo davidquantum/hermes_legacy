@@ -20,14 +20,14 @@
 #ifndef __SPACE_H
 #define __SPACE_H
 
-#include "../mesh.h"
+#include "mesh.h"
 #include "../../../hermes_common/vector.h"
-#include "../shapeset/shapeset.h"
-#include "../asmlist.h"
-#include "../quad.h"
-#include "../order.h"
+#include "shapeset/shapeset.h"
+#include "asmlist.h"
+#include "quad.h"
+#include "order.h"
 
-#include "../../../hermes_common/bctypes.h"
+#include "bctypes.h"
 
 /// @defgroup spaces Spaces
 ///
@@ -65,10 +65,10 @@ public:
   Ord3 get_element_order(unsigned int eid) const;
   /// Sets the same polynomial order for all elements in the mesh. Intended for 
   /// the user and thus assign_dofs() is called at the end of this function.
-  void set_uniform_order(Ord3 order, int marker = HERMES_ANY);
+  void set_uniform_order(Ord3 order, int marker = HERMES_ANY_INT);
   /// Sets the same polynomial order for all elements in the mesh. Does not 
   /// call assign_dofs(). For internal use.
-  void set_uniform_order_internal(Ord3 order, int marker = HERMES_ANY);
+  void set_uniform_order_internal(Ord3 order, int marker = HERMES_ANY_INT);
 
   void copy_orders(const Space &space, int inc = 0);
 
@@ -99,8 +99,13 @@ public:
   /// FE mesh
   Mesh *mesh;
 
+  /// Create globally refined space.
+  static Hermes::vector<Space *>* construct_refined_spaces(Hermes::vector<Space *> coarse, int order_increase = 1);
+  static Space* construct_refined_space(Space* coarse, int order_increase = 1);
+
   static int get_num_dofs(Hermes::vector<Space *> spaces);
-  static int assign_dofs(Hermes::vector<Space*> spaces) ;
+  static int get_num_dofs(Space* space);
+  static int assign_dofs(Hermes::vector<Space*> spaces);
 
 protected:
   Shapeset *shapeset;
@@ -144,7 +149,7 @@ protected:
 
     NodeData() {
       marker = H3D_MARKER_UNDEFINED;
-      bc_type = BC_NONE;
+      bc_type = H3D_BC_NONE;
     }
   };
 

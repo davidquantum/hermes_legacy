@@ -20,10 +20,6 @@
 #include "../mesh/transform.h"
 #include "../quadrature/quad_all.h"
 
-// Type for exact functions
-typedef scalar(*ExactFunction)(double x, double y, scalar& dx, scalar& dy);
-typedef scalar2&(*ExactFunction2)(double x, double y, scalar2& dx, scalar2& dy);
-
 // Precalculation masks
 enum
 {
@@ -104,7 +100,7 @@ public:
   /// \brief Returns the polynomial degree of the function being represented by the class.
   int get_fn_order() const { return order; }
 
-  /// \brief Returns the polynomial degree of the function at given edge. To be overriden in derived classes.
+  /// \brief Returns the polynomial degree of the function at given edge. To be overridden in derived classes.
   /// \param edge [in] Edge at which the order should be evaluated. (0-3)
   virtual int get_edge_fn_order(int edge) { return order; }
 

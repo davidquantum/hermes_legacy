@@ -14,27 +14,21 @@
 // Ir' - G*Ur + \omega*C*Ui = 0
 // Ii' - G*Ui - \omega*C*Ur = 0
 
-// in an interval (0, 10) equipped with Dirichlet bdy conditions
-// x1(0) = 1, x2(0) = 0, x3(0) = 0, x4(0) = 0
 
-double L=25e-9;               // induktance [H/m]
-double C=10e-12;              // capacitance [F/m]
-double G=1e-9;                // conductance [S/m]
-double R=1e-3;                // resistance [Ohm/m]
-double l=10 ;                 // length of the line [m]
-double omega=2*M_PI*3e8;      //
-double Zl=60;                 // load impedance[Ohm]
+double L = 2.075e-7;               // induktance [H/m]
+double C = 83e-12;                 // capacitance [F/m]
+double G = 1e-9;                   // conductance [S/m]
+double R = 1e-3;                   // resistance [Ohm/m]
+double l = 2;                      // length of the line [m]
+double omega = 2*M_PI*3e8;         // angular velocity [rad/s]
+double Zl = 100;                   // load impedance[Ohm]
 
-//double Val_newton_alpha_U_Re=-R/Zl;
-//double Val_newton_alpha_U_Im=-omega*L/Zl;
-//double Val_newton_alpha_I_Re=-G*Zl;
-//double Val_newton_alpha_I_Im=-omega*C*Zl;
 
 // General input:
-static int NEQ = 4;
-int NELEM = 1000;          // number of elements
+static int NEQ = 4;         // number of equations
+int NELEM = 20;             // number of elements
 double A = 0, B = l;        // domain end points
-int P_INIT = 2;             // initial polynomial degree
+int P_INIT = 5;             // initial polynomial degree
 
 // Matrix solver.
 MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESOS, SOLVER_AZTECOO, SOLVER_MUMPS,
@@ -46,14 +40,16 @@ double NEWTON_TOL = 1e-5;               // Tolerance.
 int NEWTON_MAX_ITER = 150;              // Max. number of Newton iterations.
 
 // Boundary conditions.
-Hermes::vector<BCSpec *>DIR_BC_LEFT =  Hermes::vector<BCSpec *>(new BCSpec(0,1), new BCSpec(0,0), 
-                              new BCSpec(0,0), new BCSpec(0,0));
+
+BCSpec * bc_u_re_left = new BCSpec(0,1);
+BCSpec * bc_u_im_left = new BCSpec(1,0);
+Hermes::vector<BCSpec *>DIR_BC_LEFT =  Hermes::vector<BCSpec *>(bc_u_re_left, bc_u_im_left);
 Hermes::vector<BCSpec *> DIR_BC_RIGHT = Hermes::vector<BCSpec *>();
 
 //At the end of the line is an indirect boundary condition U(l) = I(l)*Zl see below
 
 // Weak forms for Jacobi matrix and residual
-#include "forms.cpp"
+#include "definitions.cpp"
 
 int main() {
   // Create space, set Dirichlet BC, enumerate basis functions.
@@ -78,10 +74,10 @@ int main() {
   wf.add_vector_form(1, residual_2);
   wf.add_vector_form(2, residual_3);
   wf.add_vector_form(3, residual_4);
-  wf.add_matrix_form_surf(0, 0, jacobian_surf_right_U_Re, BOUNDARY_RIGHT);
-  wf.add_matrix_form_surf(0, 2, jacobian_surf_right_U_Im, BOUNDARY_RIGHT);
-  wf.add_matrix_form_surf(1, 1, jacobian_surf_right_I_Re, BOUNDARY_RIGHT);
-  wf.add_matrix_form_surf(1, 3, jacobian_surf_right_I_Im, BOUNDARY_RIGHT);
+  wf.add_matrix_form_surf(0, 0, jacobian_surf_right_U_Re_Re, BOUNDARY_RIGHT);
+  wf.add_matrix_form_surf(0, 2, jacobian_surf_right_U_Re_Im, BOUNDARY_RIGHT);
+  wf.add_matrix_form_surf(1, 1, jacobian_surf_right_U_Im_Re, BOUNDARY_RIGHT);
+  wf.add_matrix_form_surf(1, 3, jacobian_surf_right_U_Im_Im, BOUNDARY_RIGHT);
 
   // Initialize the FE problem.
   bool is_linear = false;
@@ -113,7 +109,7 @@ int main() {
     //       residual on fine mesh is too small.
     if(res_l2_norm < NEWTON_TOL && it > 1) break;
 
-    // Multiply the residual vector with -1 since the matrix 
+    // Multiply the residual vector with -1 since the matrix
     // equation reads J(Y^n) \deltaY^{n+1} = -F(Y^n).
     for(int i = 0; i < Space::get_num_dofs(space); i++) rhs->set(i, -rhs->get(i));
 
@@ -126,13 +122,23 @@ int main() {
 
     // If the maximum number of iteration has been reached, then quit.
     if (it >= NEWTON_MAX_ITER) error ("Newton method did not converge.");
-    
+
     it++;
   }
 
   // Plot the solution.
   Linearizer l(space);
   l.plot_solution("solution.gp");
+
+  // cleaning
+  delete dp;
+  delete rhs;
+  delete solver;
+  delete[] coeff_vec;
+  delete space;
+  delete bc_u_re_left;
+  delete bc_u_im_left;
+  delete matrix;
 
   info("Done.");
   return 0;

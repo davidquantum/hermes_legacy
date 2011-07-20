@@ -32,8 +32,8 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
                                                   // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 
 // Boundary conditions.
-Hermes::vector<BCSpec *>DIR_BC_LEFT =  Hermes::vector<BCSpec *>(new BCSpec(0,YA));
-Hermes::vector<BCSpec *> DIR_BC_RIGHT = Hermes::vector<BCSpec *>();
+BCSpec DIR_BC_LEFT(0, YA);
+BCSpec DIR_BC_RIGHT;
 
 // Function f(y, x).
 double f(double y, double x) {
@@ -46,7 +46,7 @@ double dfdy(double y, double x) {
 }
 
 // Weak forms for the Jacobi matrix and residual.
-#include "forms.cpp"
+#include "definitions.cpp"
 
 int main() 
 {
@@ -114,6 +114,14 @@ int main()
   // Plot the solution.
   Linearizer l(space);
   l.plot_solution("solution.dat");
+
+  // cleaning
+  delete dp;
+  delete rhs;
+  delete solver;
+  delete[] coeff_vec;
+  delete space;
+  delete matrix;
 
   info("Done.");
   return 0;

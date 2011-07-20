@@ -60,8 +60,10 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
                                                   // SOLVER_PETSC, SOLVER_SUPERLU, SOLVER_UMFPACK.
 
 // Boundary conditions.
-Hermes::vector<BCSpec *>DIR_BC_LEFT =  Hermes::vector<BCSpec *>(new BCSpec(0,0));
-Hermes::vector<BCSpec *>DIR_BC_RIGHT = Hermes::vector<BCSpec *>(new BCSpec(0,0));
+BCSpec DIR_BC_LEFT(0, 0);
+BCSpec DIR_BC_RIGHT(0, 0);
+
+
 
 // Function f(x).
 double f(double x) 
@@ -80,7 +82,7 @@ void exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM])
 }
 
 // Weak forms for Jacobi matrix and residual.
-#include "forms.cpp"
+#include "definitions.cpp"
 
 // Sample quantity of interest - solution value u[0] at 'x'.
 // NOTE: quantity of interest is any linear functional of solution.

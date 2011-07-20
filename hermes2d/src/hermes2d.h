@@ -45,10 +45,7 @@
 #include "../hermes_common/solver/precond_ml.h"
 
 // boundary conditions
-  // this
-#include "../hermes_common/bctypes.h"
-  // is going to be replaced with this
-#include "boundaryconditions/boundaryconditions.h"
+#include "boundaryconditions/essential_bcs.h"
 
 // Eigensolver
 #include "../hermes_common/solver/eigensolver.h"
@@ -82,15 +79,14 @@
 #include "discrete_problem.h"
 #include "function/forms.h"
 
-#include "integrals/integrals_h1.h"
-#include "integrals/integrals_hcurl.h"
-#include "integrals/integrals_hdiv.h"
-#include "integrals/integrals_l2.h"
+#include "integrals/h1.h"
+#include "integrals/hcurl.h"
+#include "integrals/hdiv.h"
+#include "integrals/l2.h"
 
 #include "function/solution.h"
 #include "function/filter.h"
 
-#include "function/norm.h"
 #include "graph.h"
 
 #include "views/view.h"
@@ -117,9 +113,18 @@
 #include "neighbor.h"
 #include "ogprojection.h"
 
-#include "numerical_flux.h"
 #include "runge_kutta.h"
+#include "function/spline.h"
 #include "tables.h"
+
+#include "definitions.h"
+
+#include "weakform_library/weakforms_elasticity.h"
+#include "weakform_library/weakforms_h1.h"
+#include "weakform_library/weakforms_hcurl.h"
+#include "weakform_library/weakforms_maxwell.h"
+#include "weakform_library/weakforms_neutronics.h"
+
 /**
 
 \mainpage
@@ -306,8 +311,5 @@ Relevant files: view.h
 
 
 */
-
-
-
 
 #endif

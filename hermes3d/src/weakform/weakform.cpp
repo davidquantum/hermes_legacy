@@ -47,7 +47,7 @@ void WeakForm::add_matrix_form(int i, int j, matrix_form_val_t fn, matrix_form_o
 	if (i < 0 || i >= neq || j < 0 || j >= neq) error("Invalid equation number.");
 	if (sym != HERMES_ANTISYM && sym != HERMES_NONSYM && sym != HERMES_SYM) error("\"sym\" must be HERMES_ANTISYM, HERMES_NONSYM or HERMES_SYM.");
 	if (sym < 0 && i == j) error("Only off-diagonal forms can be antisymmetric.");
-	if (area != HERMES_ANY && area < 0 && -area > (signed) areas.size()) error("Invalid area number.");
+	if (area != HERMES_ANY_INT && area < 0 && -area > (signed) areas.size()) error("Invalid area number.");
 	if (mfvol.size() > 100) warning("Large number of forms (> 100). Is this the intent?");
 
         MatrixFormVol form = { i, j, sym, area, fn, ord, ext };
@@ -59,7 +59,7 @@ void WeakForm::add_matrix_form_surf(int i, int j, matrix_form_val_t fn, matrix_f
 {
 	_F_
 	if (i < 0 || i >= neq || j < 0 || j >= neq) error("Invalid equation number.");
-	if (area != HERMES_ANY && area < 0 && -area > (signed) areas.size()) error("Invalid area number.");
+	if (area != HERMES_ANY_INT && area < 0 && -area > (signed) areas.size()) error("Invalid area number.");
 
         MatrixFormSurf form = { i, j, area, fn, ord, ext };
 	mfsurf.push_back(form);
@@ -70,7 +70,7 @@ void WeakForm::add_vector_form(int i, vector_form_val_t fn, vector_form_ord_t or
 {
 	_F_
 	if (i < 0 || i >= neq) error("Invalid equation number.");
-	if (area != HERMES_ANY && area < 0 && -area > (signed) areas.size()) error("Invalid area number.");
+	if (area != HERMES_ANY_INT && area < 0 && -area > (signed) areas.size()) error("Invalid area number.");
 
         VectorFormVol form = { i, area, fn, ord, ext };
 	vfvol.push_back(form);
@@ -81,7 +81,7 @@ void WeakForm::add_vector_form_surf(int i, vector_form_val_t fn, vector_form_ord
 {
 	_F_
 	if (i < 0 || i >= neq) error("Invalid equation number.");
-	if (area != HERMES_ANY && area < 0 && -area > (signed) areas.size()) error("Invalid area number.");
+	if (area != HERMES_ANY_INT && area < 0 && -area > (signed) areas.size()) error("Invalid area number.");
 
         VectorFormSurf form = { i, area, fn, ord, ext };
 	vfsurf.push_back(form);
@@ -101,50 +101,58 @@ void WeakForm::set_ext_fns(void *fn, Hermes::vector<MeshFunction*> ext)
 /// This function is identical in H2D and H3D.
 ///
 void WeakForm::get_stages(Hermes::vector<Space *> spaces, Hermes::vector<Solution *>& u_ext, 
-               std::vector<WeakForm::Stage>& stages, bool rhsonly)
+               std::vector<WeakForm::Stage>& stages, bool want_matrix, bool want_vector)
 {
   _F_
+
+  if (!want_matrix && !want_vector) return;
+
   unsigned i;
   stages.clear();
 
-  // process volume matrix forms
-  for (i = 0; i < mfvol.size(); i++) 
-  {
-    int ii = mfvol[i].i, jj = mfvol[i].j;
-    Mesh *m1 = spaces[ii]->get_mesh();
-    Mesh *m2 = spaces[jj]->get_mesh();
-    Stage *s = find_stage(stages, ii, jj, m1, m2, 
-                          mfvol[i].ext, u_ext);
-    s->mfvol.push_back(&mfvol[i]);
-  }
+  if (want_matrix || want_vector) {    // This is because of linear problems where 
+                                       // matrix terms with the Dirichlet lift go to rhs.
+    // process volume matrix forms
+    for (i = 0; i < mfvol.size(); i++) 
+    {
+      int ii = mfvol[i].i, jj = mfvol[i].j;
+      Mesh *m1 = spaces[ii]->get_mesh();
+      Mesh *m2 = spaces[jj]->get_mesh();
+      Stage *s = find_stage(stages, ii, jj, m1, m2, 
+                            mfvol[i].ext, u_ext);
+      s->mfvol.push_back(&mfvol[i]);
+    }
 
-  // process surface matrix forms
-  for (i = 0; i < mfsurf.size(); i++) 
-  {
-    int ii = mfsurf[i].i, jj = mfsurf[i].j;
-    Mesh *m1 = spaces[ii]->get_mesh();
-    Mesh *m2 = spaces[jj]->get_mesh();
-    Stage *s = find_stage(stages, ii, jj, m1, m2, 
-                          mfsurf[i].ext, u_ext);
-    s->mfsurf.push_back(&mfsurf[i]);
-  }
-			
-  // process volume vector forms
-  for (unsigned i = 0; i < vfvol.size(); i++) {
-    int ii = vfvol[i].i;
-    Mesh *m = spaces[ii]->get_mesh();
-    Stage *s = find_stage(stages, ii, ii, m, m, 
-                          vfvol[i].ext, u_ext);
-    s->vfvol.push_back(&vfvol[i]);
-  }
+    // process surface matrix forms
+    for (i = 0; i < mfsurf.size(); i++) 
+    {
+      int ii = mfsurf[i].i, jj = mfsurf[i].j;
+      Mesh *m1 = spaces[ii]->get_mesh();
+      Mesh *m2 = spaces[jj]->get_mesh();
+      Stage *s = find_stage(stages, ii, jj, m1, m2, 
+                            mfsurf[i].ext, u_ext);
+      s->mfsurf.push_back(&mfsurf[i]);
+    }
+  }	
+		
+  if (want_vector) {
+    // process volume vector forms
+    for (unsigned i = 0; i < vfvol.size(); i++) {
+      int ii = vfvol[i].i;
+      Mesh *m = spaces[ii]->get_mesh();
+      Stage *s = find_stage(stages, ii, ii, m, m, 
+                            vfvol[i].ext, u_ext);
+      s->vfvol.push_back(&vfvol[i]);
+    }
 
-  // process surface vector forms
-  for (unsigned i = 0; i < vfsurf.size(); i++) {
-    int ii = vfsurf[i].i;
-    Mesh *m = spaces[ii]->get_mesh();
-    Stage *s = find_stage(stages, ii, ii, m, m, 
-                          vfsurf[i].ext, u_ext);
-    s->vfsurf.push_back(&vfsurf[i]);
+    // process surface vector forms
+    for (unsigned i = 0; i < vfsurf.size(); i++) {
+      int ii = vfsurf[i].i;
+      Mesh *m = spaces[ii]->get_mesh();
+      Stage *s = find_stage(stages, ii, ii, m, m, 
+                            vfsurf[i].ext, u_ext);
+      s->vfsurf.push_back(&vfsurf[i]);
+    }
   }
 
   // helper macro for iterating in a set

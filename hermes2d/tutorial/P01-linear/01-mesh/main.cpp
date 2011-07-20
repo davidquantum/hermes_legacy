@@ -3,25 +3,22 @@
 
 // This example shows how to load a mesh, perform various types
 // of initial refinements, and use keyboard and mouse controls.
+//
+// Geometry: L-Shape domain (see file domain.mesh).
 
 static char text[] = "\
 Click into the image window and:\n\
-  press 'm' to show element numbers,\n\
+  press 'm' to show/hide element material markers,\n\
+  press 'i' to show/hide element indices,\n\
   press 'b' to toggle boundary markers,\n\
   enlarge your window and press 'c' to center the mesh,\n\
   zoom into the mesh using the right mouse button\n\
-  and move the mesh around using the left mouse button\n\
-    -- in this way you can read the numbers of all elements,\n\
+  move the mesh around using the left mouse button\n\
   press 'c' to center the mesh again,\n\
-  press 'm' to hide element numbers,\n\
+  press 'h' to render high resolution image,\n\
   press 's' to save a screenshot in bmp format\n\
-    -- the bmp file can be converted to any standard\n\
-       image format using the command \"convert\",\n\
   press 'q' to quit.\n\
-  Also see help - click into the image window and press F1.\n";
-
-// Boundary markers.
-const int BDY_BOTTOM = 1, BDY_OUTER = 2, BDY_LEFT = 3, BDY_INNER = 4;
+  Press F1 for help.\n";
 
 int main(int argc, char* argv[])
 {
@@ -36,10 +33,12 @@ int main(int argc, char* argv[])
   // section in the mesh file.
   double x_ref = 2.0, y_ref = 3.0;
   if(!mesh.rescale(x_ref, y_ref)) info("Mesh was not rescaled.");
-  else {info("Mesh has been rescaled by the factors of %g and %g in the x- and y- direction, respectively.", x_ref, y_ref);}
+  else {
+    info("Mesh scaled by the factors of %g and %g in the x- and y- direction, respectively.", 
+         x_ref, y_ref);
+  }
 
   // Conversion between triangular and quadrilateral meshes (optional). 
-  // Need to be done before any other type of mesh refinement.
   //mesh.convert_quads_to_triangles();
   //mesh.convert_triangles_to_quads();
 
@@ -50,7 +49,8 @@ int main(int argc, char* argv[])
   mesh.refine_towards_vertex(3, 4);    // Four refinements towards vertex no. 3.
 
   // Refine towards boundary (optional).
-  mesh.refine_towards_boundary(BDY_OUTER, 4);  // Four refinements towards boundary with marker 2.
+  mesh.refine_towards_boundary("Outer", 4);  // Four successive refinements towards 
+                                             // boundary with marker "Outer".
 
   // Refine individual elements (optional).
   mesh.refine_element_id(86, 0);          // 0... isotropic refinement.

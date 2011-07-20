@@ -1,3 +1,0 @@
-rm *~ 
-./system-adapt
-python plot_graph.py &

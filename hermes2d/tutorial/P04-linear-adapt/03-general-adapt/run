@@ -1,4 +1,0 @@
-rm *~ 
-./general-adapt
-python plot_graph.py &
-

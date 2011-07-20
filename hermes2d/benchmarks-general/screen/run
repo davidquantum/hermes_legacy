@@ -1,0 +1,4 @@
+rm *~ 
+./benchmark-screen
+python plot_graph.py &
+

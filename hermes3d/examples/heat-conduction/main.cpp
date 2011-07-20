@@ -44,12 +44,12 @@ const double FINAL_TIME = 2 * M_PI;		  // Length of time interval in seconds.
 // Global time variable. 
 double TIME = TAU;
 
-// Exact solution. 
-#include "exact_solution.cpp"
+// Exact solution and Weak forms. 
+#include "definitions.cpp"
 
 // Boundary condition types.
 BCType bc_types(int marker) {
-  return BC_ESSENTIAL;
+  return H3D_BC_ESSENTIAL;
 }
 
 // Essential (Dirichlet) boundary condition values. 
@@ -57,8 +57,6 @@ scalar essential_bc_values(int ess_bdy_marker, double x, double y, double z)
 {
   return 0;
 }
-
-#include "forms.cpp"
 
 int main(int argc, char **args) 
 {
@@ -84,7 +82,7 @@ int main(int argc, char **args)
   // Initialize weak formulation. 
   WeakForm wf;
   wf.add_matrix_form(bilinear_form<double, scalar>, bilinear_form<Ord, Ord>, HERMES_SYM);
-  wf.add_vector_form(linear_form<double, scalar>, linear_form<Ord, Ord>, HERMES_ANY, &sln_prev);
+  wf.add_vector_form(linear_form<double, scalar>, linear_form<Ord, Ord>, HERMES_ANY_INT, &sln_prev);
 
   // Initialize discrete problem.
   bool is_linear = true;
@@ -116,8 +114,8 @@ int main(int argc, char **args)
     // Assemble the linear problem.
     info("Assembling the linear problem (ndof: %d).", Space::get_num_dofs(&space));
 
-    bool rhsonly = (ts > 0);
-    dp.assemble(matrix, rhs, rhsonly);
+    if (ts == 0) dp.assemble(matrix, rhs);
+    else dp.assemble(NULL, rhs);
 
     // Solve the linear system. If successful, obtain the solution.
     info("Solving the linear problem.");

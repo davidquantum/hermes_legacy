@@ -29,8 +29,8 @@ MatrixSolverType matrix_solver = SOLVER_UMFPACK;  // Possibilities: SOLVER_AMESO
 // Boundary condition types. 
 BCType bc_types(int marker)
 {
-  if (marker == 1) return BC_ESSENTIAL;
-  else return BC_NATURAL;
+  if (marker == 1) return H3D_BC_ESSENTIAL;
+  else return H3D_BC_NATURAL;
 }
 
 // Essential (Dirichlet) boundary condition values. 
@@ -40,7 +40,7 @@ scalar essential_bc_values(int ess_bdy_marker, double x, double y, double z)
 }
 
 // Weak forms.
-#include "forms.cpp"
+#include "definitions.cpp"
 
 int main(int argc, char **args)
 {
@@ -65,7 +65,7 @@ int main(int argc, char **args)
   WeakForm wf;
   wf.add_matrix_form(callback(bilinear_form1), HERMES_SYM, 1);
   wf.add_matrix_form(callback(bilinear_form2), HERMES_SYM, 2);
-  wf.add_vector_form(callback(linear_form), HERMES_ANY);
+  wf.add_vector_form(callback(linear_form), HERMES_ANY_INT);
 
   // Initialize discrete problem.
   bool is_linear = true;

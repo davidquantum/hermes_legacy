@@ -12,55 +12,53 @@
 // on the reference square and reference triangle domains,
 // just load the corresponding mesh at the beginning of the
 // main.cpp file.
+//
+// Geometry: L-Shape domain (see file domain.mesh). It can be replaced
+//           with "ref_square.mesh" and "ref_triangle.mesh" to visualize 
+//           reference element shape functions. 
 
 const int P_INIT = 3;
 
 static char text[] = "\
 Click into the image window and:\n\
   press 'f' to make the color scale finer/coarser,\n\
-  press '3' to see 3D plot of the basis functions,\n\
+  press '3' to render 3D plot of the basis functions,\n\
+  change the scale on the vertical axis using the * and / keys,\n\
   use all three mouse buttons to rotate/move/enlarge the graphs,\n\
   use the right/left arrows to browse through basis functions,\n\
-  press 'l' to see linearizer output\n\
-      -- higher-order polynomials are plotted using \n\
-         adaptive piecewise-linear approximation,\n\
+  press 'l' to see adaptive linearizer output for OpenGL\n\
   use the left mouse button to drag the scale to another corner,\n\
   press 'p' to switch to greyscales and back,\n\
+  press 'h' to render high-resolution image,\n\
   press 'm' to hide the mesh,\n\
   press 's' to save screenshots,\n\
   press 'q' to quit.\n\
-  Also see help - click into the image window and press F1.\n";
+  Press F1 for help.\n";
 
 int main(int argc, char* argv[])
 {
   // Load the mesh.
   Mesh mesh;
   H2DReader mloader;
-  mloader.load("domain.mesh", &mesh);            // original L-shape domain
+  mloader.load("domain.mesh", &mesh);            // L-shape domain,
 
   // The following can be used to view higher-order shape functions
   // on reference domains (disable uniform mesh refinememts for that).
-  //mloader.load("ref_square.mesh", &mesh);      // reference square
-  //mloader.load("ref_triangle.mesh", &mesh);    // reference triangle
+  //mloader.load("ref_square.mesh", &mesh);      // Reference square,
+  //mloader.load("ref_triangle.mesh", &mesh);    // Reference triangle,
 
   // Refine all elements (optional).
   mesh.refine_all_elements();
 
-  // Enter boundary markers.
-  // (If no markers are entered, default is a natural BC).
-  BCTypes bc_types;
-
-  // Enter Dirichlet boundary values (default is zero).
-  BCValues bc_values;
-
   // Create an H1 space with default shapeset and natural BC.
-  H1Space space(&mesh, &bc_types, &bc_values, P_INIT);
+  H1Space space(&mesh, P_INIT);
 
   // View FE basis functions.
-  BaseView bview("FE Space", new WinGeom(0, 0, 440, 350));
+  BaseView bview("Finite Element Space", new WinGeom(0, 0, 440, 350));
+  bview.fix_scale_width(50);
   bview.show(&space);
 
-  // Practice some keyboard and mouse controls.
+  // Practice keyboard and mouse controls.
   printf("%s", text);
 
   // Wait for the view to be closed.

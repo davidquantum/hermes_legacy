@@ -36,7 +36,7 @@ Hermes::vector<BCSpec *>DIR_BC_LEFT =  Hermes::vector<BCSpec *>(new BCSpec(0,1),
 Hermes::vector<BCSpec *> DIR_BC_RIGHT = Hermes::vector<BCSpec *>();
 
 // Weak forms for Jacobi matrix and residual.
-#include "forms.cpp"
+#include "../definitions.cpp"
 
 
 int main() 
@@ -125,6 +125,17 @@ int main()
   }
   
   info("Total running time: %g s", cpu_time.accumulated());
+
+  // Cleanup.
+  for(unsigned j = 0; j < DIR_BC_LEFT.size(); j ++)
+      delete DIR_BC_LEFT[j];
+  DIR_BC_LEFT.clear();
+
+  delete matrix;
+  delete rhs;
+  delete solver;
+  delete[] coeff_vec;
+  delete space;
 
   // Test variable.
   info("ndof = %d.", Space::get_num_dofs(space));
